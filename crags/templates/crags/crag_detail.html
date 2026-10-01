@@ -1,0 +1,180 @@
+s{% extends "base.html" %}
+
+
+{% block title %}
+{{ crag.name }} – Felsen mit Kids
+{% endblock %}
+
+
+{% block content %}
+
+
+<a href="{% url 'crags:list' %}">
+    ← Alle Felsen
+</a>
+
+
+<header class="crag-header">
+
+    <h1>
+        {{ crag.name }}
+    </h1>
+
+    <p class="area">
+        {{ crag.area.name }}
+    </p>
+
+</header>
+
+
+{% if crag.photos.all %}
+
+<section>
+
+    <div class="photo-gallery">
+
+        {% for photo in crag.photos.all %}
+
+            <figure>
+
+                <img
+                    src="{{ photo.image.url }}"
+                    alt="{{ photo.caption|default:crag.name }}"
+                >
+
+                {% if photo.caption %}
+
+                    <figcaption>
+                        {{ photo.caption }}
+                    </figcaption>
+
+                {% endif %}
+
+            </figure>
+
+        {% endfor %}
+
+    </div>
+
+</section>
+
+{% endif %}
+
+
+
+<section>
+
+    <h2>
+        Für Familien
+    </h2>
+
+
+    <div class="grid">
+
+        <article>
+
+            <small>
+                Familienfreundlichkeit
+            </small>
+
+            <h3>
+                {% if crag.family_rating %}
+                    ★ {{ crag.family_rating }}/5
+                {% else %}
+                    –
+                {% endif %}
+            </h3>
+
+        </article>
+
+
+        <article>
+
+            <small>
+                Zustieg
+            </small>
+
+            <h3>
+                {% if crag.approach_minutes %}
+                    {{ crag.approach_minutes }} min
+                {% else %}
+                    –
+                {% endif %}
+            </h3>
+
+        </article>
+
+
+        <article>
+
+            <small>
+                Kinderwagen
+            </small>
+
+            <h3>
+                {{ crag.get_stroller_friendly_display }}
+            </h3>
+
+        </article>
+
+
+        <article>
+
+            <small>
+                Ausrichtung
+            </small>
+
+            <h3>
+                {% if crag.orientation %}
+                    {{ crag.get_orientation_display }}
+                {% else %}
+                    –
+                {% endif %}
+            </h3>
+
+        </article>
+
+    </div>
+
+</section>
+
+
+
+{% if crag.family_notes %}
+
+<section>
+
+    <h2>
+        Hinweise für Familien
+    </h2>
+
+    <article>
+
+        {{ crag.family_notes|linebreaks }}
+
+    </article>
+
+</section>
+
+{% endif %}
+
+
+
+{% if crag.description %}
+
+<section>
+
+    <h2>
+        Über den Fels
+    </h2>
+
+    <p>
+        {{ crag.description|linebreaksbr }}
+    </p>
+
+</section>
+
+{% endif %}
+
+
+{% endblock %}

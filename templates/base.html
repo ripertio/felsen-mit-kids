@@ -1,0 +1,83 @@
+{% load static %}
+
+<!DOCTYPE html>
+<html lang="de">
+
+<head>
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1"
+    >
+
+    <title>
+        {% block title %}
+            Felsen mit Kids
+        {% endblock %}
+    </title>
+
+    <!-- Pico CSS -->
+    <link
+        rel="stylesheet"
+        href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css"
+    >
+
+    <!-- Eigene Ergänzungen -->
+    <link
+        rel="stylesheet"
+        href="{% static 'css/main.css' %}"
+    >
+</head>
+
+
+<body>
+
+<header class="container">
+
+    <nav>
+
+        <ul>
+            <li>
+                <strong>
+                    <a href="{% url 'crags:list' %}">
+                        Felsen mit Kids
+                    </a>
+                </strong>
+            </li>
+        </ul>
+
+        <ul>
+            <li>
+                <a href="{% url 'crags:list' %}">
+                    Felsen finden
+                </a>
+            </li>
+        </ul>
+
+    </nav>
+
+</header>
+
+
+<main class="container">
+
+    {% block content %}
+    {% endblock %}
+
+</main>
+
+
+<footer class="container">
+
+    <hr>
+
+    <small>
+        Felsen mit Kids
+    </small>
+
+</footer>
+
+</body>
+
+</html>

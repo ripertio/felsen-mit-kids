@@ -56,7 +56,6 @@ A working database-backed Django application running entirely through Docker Com
 * Django project
 * PostgreSQL
 * Gunicorn
-* Traefik
 * Docker Compose
 * Django Admin
 * Initial database schema
@@ -66,11 +65,8 @@ A working database-backed Django application running entirely through Docker Com
 ### Initial entities
 
 ```text
-User
 Area
-Guidebook
 Crag
-CragGuidebook
 Photo
 ```
 
@@ -88,25 +84,8 @@ Crag
 ├── parking_coordinates
 ├── created_by
 ├── status
-├── details [JSONB]
 ├── created_at
 └── updated_at
-```
-
-JSONB is used for flexible attributes:
-
-```json
-{
-  "approach": {
-    "minutes": 15,
-    "stroller": "partially"
-  },
-  "family": {
-    "ground": "flat",
-    "shade": "afternoon",
-    "hazards": ["drop_off"]
-  }
-}
 ```
 
 ### Definition of Done
@@ -119,7 +98,7 @@ starts the complete environment.
 
 Django Admin allows creation/editing of Areas, Guidebooks and Crags.
 
-Database contains approximately 10–20 realistic test crags.
+Database contains approximately 5 realistic test crags.
 
 ---
 
@@ -135,23 +114,9 @@ Public crag list with:
 
 * Free-text search
 * Area filter
-* Guidebook filter
 * Family rating filter
-* Orientation filter
-* Basic sorting
-* Pagination
 
-Filters use standard URL query parameters:
-
-```text
-/crags/?q=sonnen
-       &area=allgaeu
-       &guidebook=allgaeu-rock
-       &rating=4
-       &orientation=SW
-```
-
-This makes searches bookmarkable and shareable.
+Filters use standard URL query parameters: This makes searches bookmarkable and shareable.
 
 ### UI
 
@@ -160,8 +125,7 @@ Find a crag
 
 [ Search........................ ]
 
-[ Area ▼ ] [ Guidebook ▼ ]
-[ Family Rating ▼ ] [ Orientation ▼ ]
+[ Area ▼ ][ Family Rating ▼ ]
 
 --------------------------------------
 
@@ -176,7 +140,7 @@ SW · 15 min approach
 
 ### Definition of Done
 
-An anonymous visitor can search and filter the test dataset without authentication or JavaScript.
+An anonymous visitor can search and filter the test dataset without authentication.
 
 ---
 
@@ -203,51 +167,13 @@ Displays:
 * Orientation
 * Approach
 * Stroller suitability
-* Ground conditions
-* Shade
-* Hazards
-* Rock coordinates
-* Parking coordinates
-* Guidebooks + edition/page
-* External topo link
 * Photos
 
-Coordinates provide external navigation links rather than an embedded map.
 
 ### Design
 
 Mobile-first, simple and content-focused:
 
-```text
-Sonnenwand
-Allgäu
-
-★★★★☆ 4/5
-
-[ Main Photo ]
-
-Family suitability
-────────────────────
-
-Approach       15 min
-Stroller       Partially
-Ground         Mostly flat
-Shade          Afternoon
-
-⚠ Drop-off right of the crag
-
-Guidebooks
-────────────────────
-
-Allgäu Rock 2026
-Page 143
-
-Location
-────────────────────
-
-Rock       [ Open location ]
-Parking    [ Open location ]
-```
 
 ### Definition of Done
 
