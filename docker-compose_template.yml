@@ -6,7 +6,10 @@ services:
 
     command: >
       python manage.py runserver 0.0.0.0:8000
-      
+
+    ports:
+      - "8000:8000"
+
     environment:
       DJANGO_DEBUG: "True"
       DJANGO_SECRET_KEY: "dev-only-change-me"
@@ -24,19 +27,6 @@ services:
     depends_on:
       db:
         condition: service_healthy
-    networks:
-      - traefik_network
-      - default
-    restart: unless-stopped
-    labels:
-      - traefik.enable=true
-      - traefik.docker.network=traefik_network
-      - traefik.http.routers.${TRAEFIK_NAME}.tls=true
-      - traefik.http.routers.${TRAEFIK_NAME}.tls.certresolver=desecio
-      - traefik.http.routers.${TRAEFIK_NAME}.entrypoints=websecure
-      - traefik.http.routers.${TRAEFIK_NAME}.rule=Host(`felsen.sillybytes.eu`)
-      - traefik.http.services.${TRAEFIK_NAME}.loadbalancer.server.port=8000
-      #- traefik.http.routers.${TRAEFIK_NAME}.middlewares=ipallowlist@file #Allows only local IPs
 
   db:
     image: postgres:17
@@ -58,5 +48,4 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
-    networks:
-      - default
+
