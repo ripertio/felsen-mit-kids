@@ -1,0 +1,21 @@
+# Runtime data
+data/postgres/
+data/media/
+
+# Git
+.git/
+.gitignore
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# Local environment
+.env
+
+# Database dumps
+*.dump
+
+# macOS
+.DS_Store

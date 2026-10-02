@@ -23,9 +23,8 @@ The application should prioritize **search, filtering and useful family informat
 | Component           | Technology                  |
 | ------------------- | --------------------------- |
 | Application         | Python / Django             |
-| Frontend            | Django Templates + HTML/CSS |
+| Frontend            | Django Templates + PicoCSS  |
 | Database            | PostgreSQL                  |
-| Flexible attributes | PostgreSQL JSONB            |
 | Authentication      | Django Auth                 |
 | Administration      | Django Admin                |
 | Image processing    | Pillow                      |
@@ -33,7 +32,6 @@ The application should prioritize **search, filtering and useful family informat
 | Reverse Proxy       | Caddy/Traefik               |
 | Deployment          | Docker Compose              |
 | Persistent Storage  | Docker Volumes              |
-| Optional later      | htmx                        |
 
 ### Architecture
 
@@ -55,7 +53,6 @@ A working database-backed Django application running entirely through Docker Com
 
 * Django project
 * PostgreSQL
-* Gunicorn
 * Docker Compose
 * Django Admin
 * Initial database schema
@@ -74,18 +71,11 @@ Core `Crag` structure:
 
 ```text
 Crag
-├── id
 ├── name
 ├── area
 ├── description
 ├── orientation
 ├── family_rating
-├── rock_coordinates
-├── parking_coordinates
-├── created_by
-├── status
-├── created_at
-└── updated_at
 ```
 
 ### Definition of Done

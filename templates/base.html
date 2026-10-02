@@ -11,6 +11,11 @@
         content="width=device-width, initial-scale=1"
     >
 
+    <meta
+        name="description"
+        content="Felsen mit Kids – familienfreundliche Kletterfelsen finden und teilen."
+    >
+
     <title>
         {% block title %}
             Felsen mit Kids
@@ -23,7 +28,7 @@
         href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css"
     >
 
-    <!-- Eigene Ergänzungen -->
+    <!-- Project-specific CSS -->
     <link
         rel="stylesheet"
         href="{% static 'css/main.css' %}"
@@ -33,50 +38,87 @@
 
 <body>
 
-<header class="container">
+    <!-- Main navigation -->
+    <header class="container">
 
-    <nav>
+        <nav>
 
-        <ul>
-            <li>
-                <strong>
+            <ul>
+                <li>
+                    <strong>
+                        <a
+                            href="{% url 'home' %}"
+                            class="brand"
+                        >
+                            Felsen mit Kids
+                        </a>
+                    </strong>
+                </li>
+            </ul>
+
+
+            <ul>
+
+                <li>
                     <a href="{% url 'crags:list' %}">
-                        Felsen mit Kids
+                        Felsen
                     </a>
-                </strong>
-            </li>
-        </ul>
+                </li>
 
-        <ul>
-            <li>
-                <a href="{% url 'crags:list' %}">
-                    Felsen finden
+                <li>
+                    <a href="{% url 'docs' %}">
+                        Hilfe
+                    </a>
+                </li>
+
+                <li>
+                    <a
+                        href="{% url 'admin:index' %}"
+                        role="button"
+                        class="outline"
+                    >
+                        Login
+                    </a>
+                </li>
+
+            </ul>
+
+        </nav>
+
+    </header>
+
+
+    <!-- Page content -->
+    <main class="container">
+
+        {% block content %}
+        {% endblock %}
+
+    </main>
+
+
+    <!-- Footer -->
+    <footer class="container site-footer">
+
+        <hr>
+
+        <div class="footer-content">
+
+            <small>
+                <strong>Felsen mit Kids</strong><br>
+                Familienfreundliche Kletterfelsen
+                finden und teilen.
+            </small>
+
+            <small>
+                <a href="{% url 'docs' %}">
+                    Dokumentation
                 </a>
-            </li>
-        </ul>
+            </small>
 
-    </nav>
+        </div>
 
-</header>
-
-
-<main class="container">
-
-    {% block content %}
-    {% endblock %}
-
-</main>
-
-
-<footer class="container">
-
-    <hr>
-
-    <small>
-        Felsen mit Kids
-    </small>
-
-</footer>
+    </footer>
 
 </body>
 
