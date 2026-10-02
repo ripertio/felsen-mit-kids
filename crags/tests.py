@@ -49,11 +49,24 @@ class CragTestBase(TestCase):
 
 
 class PublicVisibilityTests(CragTestBase):
-    def test_list_shows_only_published(self):
+    def test_list_shows_published_and_pending_but_not_drafts(self):
         resp = self.client.get(reverse("crags:list"))
         self.assertContains(resp, "Öffentlich")
+        self.assertContains(resp, "Wartend")
         self.assertNotContains(resp, "Entwurf")
-        self.assertNotContains(resp, "Wartend")
+
+    def test_rejected_crag_is_hidden_from_public(self):
+        rejected = Crag.objects.create(
+            name="Abgelehnt", area=self.area, created_by=self.alice,
+            status=Crag.Status.REJECTED,
+        )
+        self.assertNotContains(self.client.get(reverse("crags:list")), "Abgelehnt")
+        resp = self.client.get(reverse("crags:detail", args=[rejected.pk]))
+        self.assertEqual(resp.status_code, 404)
+
+    def test_anonymous_can_open_pending_detail(self):
+        resp = self.client.get(reverse("crags:detail", args=[self.pending.pk]))
+        self.assertEqual(resp.status_code, 200)
 
     def test_list_ignores_bad_filter_input(self):
         resp = self.client.get(reverse("crags:list"), {"rating": "abc", "area": "xyz"})

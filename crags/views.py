@@ -2,10 +2,12 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.db.models import Q
 from django.shortcuts import get_object_or_404, redirect, render
+from django.views.decorators.http import require_POST
 
-from .forms import CragForm
-from .models import Area, Crag
+from .forms import CragForm, PhotoForm
+from .models import Area, Crag, Photo
 
+MAX_PHOTOS_PER_CRAG = 8
 
 def visible_crags(user):
     """Who may SEE which crags."""
@@ -13,8 +15,8 @@ def visible_crags(user):
     if user.is_staff:
         return qs
     if user.is_authenticated:
-        return qs.filter(Q(status=Crag.Status.PUBLISHED) | Q(created_by=user))
-    return qs.published()
+        return qs.filter(Q(status__in=Crag.PUBLIC_STATUSES) | Q(created_by=user))
+    return qs.public()
 
 
 def editable_crags(user):
@@ -25,8 +27,7 @@ def editable_crags(user):
 
 
 def crag_list(request):
-    crags = Crag.objects.select_related("area").published()
-
+    crags = Crag.objects.select_related("area").public()
     query = request.GET.get("q", "").strip()
     area_id = request.GET.get("area", "")
     min_rating = request.GET.get("rating", "")
@@ -51,7 +52,11 @@ def crag_list(request):
         crags = crags.filter(family_rating__gte=min_rating)
 
     crags = crags.order_by("name")
-    areas = Area.objects.order_by("name")
+    areas = (
+        Area.objects.filter(crags__status__in=Crag.PUBLIC_STATUSES)
+        .distinct()
+        .order_by("name")
+    )
 
     context = {
         "crags": crags,
@@ -142,3 +147,42 @@ def crag_edit(request, pk):
         "crags/crag_form.html",
         {"form": form, "title": f"{crag.name} bearbeiten", "note": note},
     )
+
+
+@login_required
+def photo_add(request, pk):
+    crag = get_object_or_404(editable_crags(request.user), pk=pk)
+
+    if not request.user.is_staff and crag.photos.count() >= MAX_PHOTOS_PER_CRAG:
+        messages.error(request, f"Maximal {MAX_PHOTOS_PER_CRAG} Fotos pro Felsen.")
+        return redirect("crags:detail", pk=crag.pk)
+
+    if request.method == "POST":
+        form = PhotoForm(request.POST, request.FILES)
+        if form.is_valid():
+            photo = form.save(commit=False)
+            photo.crag = crag
+            photo.uploaded_by = request.user
+            photo.save()
+            messages.success(request, "Foto hochgeladen.")
+            return redirect("crags:detail", pk=crag.pk)
+    else:
+        form = PhotoForm()
+
+    return render(
+        request,
+        "crags/crag_photo_form.html",
+        {"form": form, "crag": crag},
+    )
+
+
+@login_required
+@require_POST
+def photo_delete(request, pk):
+    photos = Photo.objects.filter(crag__in=editable_crags(request.user))
+    photo = get_object_or_404(photos, pk=pk)
+    crag_pk = photo.crag_id
+    photo.image.delete(save=False)  # also remove the file from disk
+    photo.delete()
+    messages.success(request, "Foto gelöscht.")
+    return redirect("crags:detail", pk=crag_pk)

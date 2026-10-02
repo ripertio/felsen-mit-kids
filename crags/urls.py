@@ -10,4 +10,6 @@ urlpatterns = [
     path("mine/", views.crag_mine, name="mine"),
     path("<int:pk>/", views.crag_detail, name="detail"),
     path("<int:pk>/edit/", views.crag_edit, name="edit"),
+    path("<int:pk>/photos/add/", views.photo_add, name="photo_add"),
+    path("photos/<int:pk>/delete/", views.photo_delete, name="photo_delete"),
 ]

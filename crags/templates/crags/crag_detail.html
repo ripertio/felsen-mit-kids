@@ -8,7 +8,9 @@
 
 {% block content %}
 
-{% if crag.status != "PUBLISHED" %}
+{% if crag.status == "PENDING" %}
+    <p><mark>Noch nicht geprüft</mark></p>
+{% elif crag.status != "PUBLISHED" %}
     <p><mark>Status: {{ crag.get_status_display }}</mark></p>
 {% endif %}
 
@@ -33,40 +35,41 @@
 
 </header>
 
-
-{% if crag.photos.all %}
-
 <section>
-
-    <div class="photo-gallery">
-
-        {% for photo in crag.photos.all %}
-
-            <figure>
-
-                <img
-                    src="{{ photo.image.url }}"
-                    alt="{{ photo.caption|default:crag.name }}"
-                >
-
-                {% if photo.caption %}
-
+    {% if crag.photos.all %}
+        <h2>Fotos</h2>
+        <div class="photo-grid">
+            {% for photo in crag.photos.all %}
+                <figure>
+                    <a href="{{ photo.image.url }}">
+                        <img
+                            src="{{ photo.image.url }}"
+                            alt="{% if photo.caption %}{{ photo.caption }}{% else %}{{ photo.get_category_display }}{% endif %}"
+                            loading="lazy"
+                        >
+                    </a>
                     <figcaption>
-                        {{ photo.caption }}
+                        <small>
+                            {{ photo.get_category_display }}{% if photo.caption %} – {{ photo.caption }}{% endif %}
+                        </small>
+                        {% if can_edit %}
+                            <form method="post"
+                                  action="{% url 'crags:photo_delete' photo.pk %}"
+                                  onsubmit="return confirm('Foto wirklich löschen?')">
+                                {% csrf_token %}
+                                <button type="submit" class="outline secondary">Löschen</button>
+                            </form>
+                        {% endif %}
                     </figcaption>
+                </figure>
+            {% endfor %}
+        </div>
+    {% endif %}
 
-                {% endif %}
-
-            </figure>
-
-        {% endfor %}
-
-    </div>
-
+    {% if can_edit %}
+        <p><a href="{% url 'crags:photo_add' crag.pk %}" role="button" class="outline">Foto hinzufügen</a></p>
+    {% endif %}
 </section>
-
-{% endif %}
-
 
 
 <section>

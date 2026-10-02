@@ -1,6 +1,52 @@
 from django import forms
+import io
 
-from .models import Area, Crag
+from django.core.exceptions import ValidationError
+from django.core.files.base import ContentFile
+from PIL import Image, ImageOps, UnidentifiedImageError
+
+from .models import Area, Crag, Photo
+
+MAX_UPLOAD_BYTES = 15 * 1024 * 1024   # 15 MB
+MAX_PIXELS = 60_000_000               # protects against decompression bombs
+MAX_EDGE = 1600                       # longest side after resize
+ALLOWED_FORMATS = {"JPEG", "PNG", "WEBP", "MPO"}  # HEIC is converted to JPEG by iOS before upload
+
+
+class PhotoForm(forms.ModelForm):
+    class Meta:
+        model = Photo
+        fields = ["image", "category", "caption"]
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Hint for the phone's file picker; iPhones convert HEIC to JPEG for this
+        self.fields["image"].widget.attrs["accept"] = "image/jpeg,image/png,image/webp"
+
+    def clean_image(self):
+        upload = self.cleaned_data["image"]
+
+        if upload.size > MAX_UPLOAD_BYTES:
+            raise ValidationError("Das Bild ist zu groß (maximal 15 MB).")
+
+        try:
+            img = Image.open(upload)
+            if img.format not in ALLOWED_FORMATS:
+                raise ValidationError("Bitte ein JPG-, PNG- oder WebP-Bild hochladen.")
+            if img.width * img.height > MAX_PIXELS:
+                raise ValidationError("Das Bild hat zu viele Pixel.")
+
+            img = ImageOps.exif_transpose(img)  # apply rotation BEFORE dropping EXIF
+            img = img.convert("RGB")
+            img.thumbnail((MAX_EDGE, MAX_EDGE))
+
+            buffer = io.BytesIO()
+            img.save(buffer, format="WEBP", quality=80, method=4)
+        except (UnidentifiedImageError, OSError, Image.DecompressionBombError):
+            raise ValidationError("Die Datei konnte nicht als Bild gelesen werden.")
+
+        # The filename is replaced by photo_upload_path on save
+        return ContentFile(buffer.getvalue(), name="photo.webp")
 
 
 class CragForm(forms.ModelForm):

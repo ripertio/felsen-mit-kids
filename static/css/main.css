@@ -23,15 +23,20 @@
     color: var(--pico-muted-color);
 }
 
-.photo-gallery {
+.photo-grid {
     display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
     gap: 1rem;
 }
-
-.photo-gallery img {
+.photo-grid figure { margin: 0; }
+.photo-grid img {
     width: 100%;
+    aspect-ratio: 4 / 3;
+    object-fit: cover;
     border-radius: var(--pico-border-radius);
 }
+.photo-grid form { margin: 0.25rem 0 0; }
+.photo-grid button { margin: 0; padding: 0.25rem 0.6rem; }
 
 
 /* Brand */

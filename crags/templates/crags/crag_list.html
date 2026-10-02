@@ -171,7 +171,7 @@ Felsen finden – Felsen mit Kids
                         <a href="{% url 'crags:detail' crag.pk %}">
                             {{ crag.name }}
                         </a>
-
+                        {% if crag.status == "PENDING" %}<small><mark>ungeprüft</mark></small>{% endif %}
                     </h2>
 
                     <span class="area">
