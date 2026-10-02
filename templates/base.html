@@ -25,7 +25,7 @@
     <!-- Pico CSS -->
     <link
         rel="stylesheet"
-        href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css"
+        href="{% static 'css/pico.min.css' %}"
     >
 
     <!-- Project-specific CSS -->
@@ -60,26 +60,34 @@
             <ul>
 
                 <li>
-                    <a href="{% url 'crags:list' %}">
-                        Felsen
-                    </a>
+                    <a href="{% url 'crags:list' %}">Felsen</a>
                 </li>
 
                 <li>
-                    <a href="{% url 'docs' %}">
-                        Hilfe
-                    </a>
+                    <a href="{% url 'docs' %}">Hilfe</a>
                 </li>
 
-                <li>
-                    <a
-                        href="{% url 'admin:index' %}"
-                        role="button"
-                        class="outline"
-                    >
-                        Login
-                    </a>
-                </li>
+                {% if user.is_authenticated %}
+                    {% if user.is_staff %}
+                        <li>
+                            <a href="{% url 'admin:index' %}">Admin</a>
+                        </li>
+                    {% endif %}
+                    <li>{{ user.username }}</li>
+                    <li>
+                        <form method="post" action="{% url 'account_logout' %}" class="nav-form">
+                            {% csrf_token %}
+                            <button type="submit" class="outline secondary">Abmelden</button>
+                        </form>
+                    </li>
+                {% else %}
+                    <li>
+                        <a href="{% url 'account_login' %}">Anmelden</a>
+                    </li>
+                    <li>
+                        <a href="{% url 'account_signup' %}" role="button" class="outline">Registrieren</a>
+                    </li>
+                {% endif %}
 
             </ul>
 
@@ -91,10 +99,18 @@
     <!-- Page content -->
     <main class="container">
 
+        {% if messages %}
+            {% for message in messages %}
+                <article class="message {{ message.tags }}">
+                    <small>{{ message }}</small>
+                </article>
+            {% endfor %}
+        {% endif %}
+
         {% block content %}
         {% endblock %}
 
-    </main>
+    </main>i
 
 
     <!-- Footer -->

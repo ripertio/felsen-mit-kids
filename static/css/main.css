@@ -100,7 +100,7 @@
 @media (min-width: 768px) {
 
     .home-actions {
-        grid-template-columns: repeat(3, 1fr);
+        grid-template-columns: repeat(2, 1fr);
     }
 
     .footer-content {
@@ -110,3 +110,13 @@
     }
 
 }
+
+.nav-form { margin: 0; }
+.nav-form button { margin: 0; padding: 0.4rem 0.9rem; }
+
+
+.message { padding: 0.75rem 1rem; margin-bottom: 1rem; }
+.message.success { border-left: 4px solid #2e7d32; }
+.message.error   { border-left: 4px solid #c62828; }
+.message.warning { border-left: 4px solid #ef6c00; }
+.message.info    { border-left: 4px solid #1565c0; }

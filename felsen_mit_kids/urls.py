@@ -18,6 +18,7 @@ urlpatterns = [
     path("crags/", include("crags.urls")),
     path("docs/", docs, name="docs"),
     path("admin/", admin.site.urls),
+    path("accounts/", include("allauth.urls")),
 ]
 
 
