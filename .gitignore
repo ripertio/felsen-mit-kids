@@ -1,2 +1,15 @@
+# PostgreSQL runtime data
+/data/postgres/
+
+# Uploaded user images
+/data/media/
+
+# Secrets
 .env
+
+# Python
+__pycache__/
+*.py[cod]
+
+
 docker-compose.yml
