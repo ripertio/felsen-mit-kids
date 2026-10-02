@@ -81,6 +81,7 @@ SESSION_COOKIE_SECURE = not DEBUG
 CSRF_COOKIE_SECURE = not DEBUG
 LOGIN_REDIRECT_URL = "/"
 ACCOUNT_LOGOUT_REDIRECT_URL = "/"
+LOGIN_URL = "account_login"
 
 # Dev: print emails to the container log instead of sending them
 EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"

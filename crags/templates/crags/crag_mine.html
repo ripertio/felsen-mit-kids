@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+
+{% block title %}Meine Felsen – Felsen mit Kids{% endblock %}
+
+{% block content %}
+    <h1>Meine Felsen</h1>
+
+    <p><a href="{% url 'crags:create' %}" role="button">Neuen Felsen eintragen</a></p>
+
+    {% for crag in crags %}
+        <article>
+            <header>
+                <a href="{% url 'crags:detail' crag.pk %}">{{ crag.name }}</a>
+                <small>– {{ crag.get_status_display }}</small>
+            </header>
+            {{ crag.area.name }}
+            <footer>
+                <a href="{% url 'crags:edit' crag.pk %}">Bearbeiten</a>
+            </footer>
+        </article>
+    {% empty %}
+        <p>Du hast noch keine Felsen eingetragen.</p>
+    {% endfor %}
+{% endblock %}

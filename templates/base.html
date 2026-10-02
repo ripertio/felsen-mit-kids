@@ -73,6 +73,8 @@
                             <a href="{% url 'admin:index' %}">Admin</a>
                         </li>
                     {% endif %}
+                    <li><a href="{% url 'crags:mine' %}">Meine Felsen</a></li>
+                    <li><a href="{% url 'crags:create' %}">Eintragen</a></li>
                     <li>{{ user.username }}</li>
                     <li>
                         <form method="post" action="{% url 'account_logout' %}" class="nav-form">
