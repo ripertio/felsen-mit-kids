@@ -39,42 +39,30 @@
 <body>
 
     <!-- Main navigation -->
-    <header class="container">
-
-        <nav>
+      <header class="container">
+        <nav class="site-nav">
 
             <ul>
                 <li>
                     <strong>
-                        <a
-                            href="{% url 'home' %}"
-                            class="brand"
-                        >
-                            Felsen mit Kids
-                        </a>
+                        <a href="{% url 'home' %}" class="brand">Felsen mit Kids</a>
                     </strong>
                 </li>
             </ul>
 
+            <input type="checkbox" id="nav-toggle" class="nav-toggle" aria-label="Menü öffnen oder schließen">
+            <label for="nav-toggle" class="nav-burger" aria-hidden="true">☰</label>
 
-            <ul>
-
-                <li>
-                    <a href="{% url 'crags:list' %}">Felsen</a>
-                </li>
-
-                <li>
-                    <a href="{% url 'docs' %}">Hilfe</a>
-                </li>
+            <ul class="nav-links">
+                <li><a href="{% url 'crags:list' %}">Felsen</a></li>
+                <li><a href="{% url 'docs' %}">Hilfe</a></li>
 
                 {% if user.is_authenticated %}
-                    {% if user.is_staff %}
-                        <li>
-                            <a href="{% url 'admin:index' %}">Admin</a>
-                        </li>
-                    {% endif %}
                     <li><a href="{% url 'crags:mine' %}">Meine Felsen</a></li>
                     <li><a href="{% url 'crags:create' %}">Eintragen</a></li>
+                    {% if user.is_staff %}
+                        <li><a href="{% url 'admin:index' %}">Admin</a></li>
+                    {% endif %}
                     <li>{{ user.username }}</li>
                     <li>
                         <form method="post" action="{% url 'account_logout' %}" class="nav-form">
@@ -83,18 +71,14 @@
                         </form>
                     </li>
                 {% else %}
-                    <li>
-                        <a href="{% url 'account_login' %}">Anmelden</a>
-                    </li>
+                    <li><a href="{% url 'account_login' %}">Anmelden</a></li>
                     <li>
                         <a href="{% url 'account_signup' %}" role="button" class="outline">Registrieren</a>
                     </li>
                 {% endif %}
-
             </ul>
 
         </nav>
-
     </header>
 
 
