@@ -29,12 +29,11 @@ def editable_crags(user):
 def crag_list(request):
     crags = Crag.objects.select_related("area").public()
     query = request.GET.get("q", "").strip()
-    area_id = request.GET.get("area", "")
+    area_name = request.GET.get("area", "")
     min_rating = request.GET.get("rating", "")
 
-    # Ignore non-numeric input instead of crashing
-    if not area_id.isdecimal():
-        area_id = ""
+    if area_name and not Area.objects.filter(name=area_name).exists():
+        area_name = ""
     if not min_rating.isdecimal():
         min_rating = ""
 
@@ -45,8 +44,8 @@ def crag_list(request):
             | Q(description__icontains=query)
         )
 
-    if area_id:
-        crags = crags.filter(area_id=area_id)
+    if area_name:
+        crags = crags.filter(area__name=area_name)
 
     if min_rating:
         crags = crags.filter(family_rating__gte=min_rating)
@@ -62,7 +61,7 @@ def crag_list(request):
         "crags": crags,
         "areas": areas,
         "query": query,
-        "selected_area": area_id,
+        "selected_area": area_name,
         "selected_rating": min_rating,
     }
     return render(request, "crags/crag_list.html", context)

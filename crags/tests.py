@@ -49,6 +49,13 @@ class CragTestBase(TestCase):
 
 
 class PublicVisibilityTests(CragTestBase):
+    def test_homepage_displays_crag_list(self):
+        resp = self.client.get("/")
+
+        self.assertEqual(resp.status_code, 200)
+        self.assertTemplateUsed(resp, "crags/crag_list.html")
+        self.assertContains(resp, "Öffentlich")
+
     def test_list_shows_published_and_pending_but_not_drafts(self):
         resp = self.client.get(reverse("crags:list"))
         self.assertContains(resp, "Öffentlich")
@@ -71,6 +78,23 @@ class PublicVisibilityTests(CragTestBase):
     def test_list_ignores_bad_filter_input(self):
         resp = self.client.get(reverse("crags:list"), {"rating": "abc", "area": "xyz"})
         self.assertEqual(resp.status_code, 200)
+
+    def test_list_filters_by_area_name(self):
+        other_area = Area.objects.create(name="Tannheimer Tal")
+        Crag.objects.create(
+            name="Anderer Fels",
+            area=other_area,
+            created_by=self.alice,
+            status=Crag.Status.PUBLISHED,
+        )
+
+        resp = self.client.get(reverse("crags:list"), {"area": self.area.name})
+
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, "Öffentlich")
+        self.assertNotContains(resp, "Anderer Fels")
+        self.assertEqual(resp.context["selected_area"], self.area.name)
+        self.assertContains(resp, f'value="{self.area.name}"')
 
     def test_anonymous_can_open_published_detail(self):
         resp = self.client.get(reverse("crags:detail", args=[self.published.pk]))

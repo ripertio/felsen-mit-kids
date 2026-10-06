@@ -47,8 +47,8 @@ Felsen finden – Felsen mit Kids
                 {% for area in areas %}
 
                     <option
-                        value="{{ area.id }}"
-                        {% if selected_area == area.id|stringformat:"s" %}
+                        value="{{ area.name }}"
+                        {% if selected_area == area.name %}
                             selected
                         {% endif %}
                     >

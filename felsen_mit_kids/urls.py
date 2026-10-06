@@ -3,10 +3,7 @@ from django.conf.urls.static import static
 from django.contrib import admin
 from django.shortcuts import render
 from django.urls import include, path
-
-
-def home(request):
-    return render(request, "home.html")
+from crags.views import crag_list
 
 
 def docs(request):
@@ -14,7 +11,7 @@ def docs(request):
 
 
 urlpatterns = [
-    path("", home, name="home"),
+    path("", crag_list, name="home"),
     path("crags/", include("crags.urls")),
     path("docs/", docs, name="docs"),
     path("admin/", admin.site.urls),
