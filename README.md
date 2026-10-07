@@ -5,41 +5,19 @@ Familienfelsen is a simple web application for discovering and contributing fami
 The project focuses on one core idea: families need reliable, easy-to-find climbing information that helps them decide quickly whether a location is suitable for their children.
 
 This project is open source. Feature ideas, feedback, and bug reports are welcome via GitHub Issues.
+- [Development Plan](https://github.com/users/ripertio/projects/2/views/1)
+- [Create Feature Request or Bug Report](https://github.com/ripertio/felsen-mit-kids/issues/new/choose)
 
-## Product vision
+## Vision
 
-Families should be able to answer:
-
-“Where can we go climbing, and is this place suitable for our distinct family needs?”
-
-The application helps visitors find crags with useful information such as:
-
-- family suitability
-- orientation
-- photos
-- guidebook references
-- location and area
-
-It also allows community members to contribute knowledge and helps administrators review and publish content in a controlled way.
+Families should be able to answer: “Where can we go climbing with our kids, and is this place suitable for our distinct family needs?”
 
 ## Goals
 
 - make suitable crags easy to discover
 - provide clear family-relevant information
-- support community contributions
 - keep moderation simple and practical
 - mobile-first and easy to use in the field
-- stay portable, maintainable, and recovery-friendly
-
-## Core principles
-
-- simple server-rendered architecture
-- mobile-first UX
-- PostgreSQL as the system of record
-- community-contributed content
-- Docker-based local development and operations
-- maintainability over complexity
-- recovery and portability over vendor lock-in
 
 ## Features
 
@@ -50,13 +28,7 @@ It also allows community members to contribute knowledge and helps administrator
 - view dedicated detail pages
 
 ### Crag information
-- name, area, description
-- family rating
-- orientation
-- parking and crag location
-- stroller suitability
-- photos
-- guidebook references
+- [Crag Information](Crag%20Details.md) 
 
 ### Community contributions
 Authenticated users can:
@@ -78,7 +50,20 @@ Admins can:
 - PostgreSQL for persistence
 - simple deployment model suitable for server migration and backup/restore
 
-## Technical overview
+---
+
+## Core principles
+
+- simple server-rendered architecture
+- mobile-first UX
+- PostgreSQL as the system of record
+- community-contributed content
+- Docker-based local development and operations
+- maintainability over complexity
+- recovery and portability over vendor lock-in  
+
+
+##  Technical overview
 
 - Python / Django
 - Django Templates
