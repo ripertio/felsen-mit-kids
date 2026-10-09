@@ -98,24 +98,63 @@ def crag_mine(request):
 def crag_create(request):
     if request.method == "POST":
         form = CragForm(request.POST)
+        photo_form = BulkPhotoForm(request.POST)
+        uploads = request.FILES.getlist("images")
+
         if form.is_valid():
-            crag = form.save(commit=False)
-            crag.created_by = request.user
-            if request.POST.get("action") == "submit":
-                crag.status = Crag.Status.PENDING
-                messages.success(request, "Eingereicht. Wir prüfen den Eintrag.")
-            else:
-                crag.status = Crag.Status.DRAFT
-                messages.success(request, "Entwurf gespeichert.")
-            crag.save()
-            return redirect("crags:detail", pk=crag.pk)
+            converted = []
+            uploads_valid = True
+            if len(uploads) > MAX_FILES_PER_UPLOAD:
+                uploads_valid = False
+                form.add_error(
+                    None, f"Maximal {MAX_FILES_PER_UPLOAD} Bilder auf einmal."
+                )
+            elif uploads:
+                if photo_form.is_valid():
+                    for upload in uploads:
+                        try:
+                            converted.append(process_image(upload))
+                        except ValidationError as exc:
+                            uploads_valid = False
+                            form.add_error(None, f"{upload.name}: {exc.messages[0]}")
+                else:
+                    uploads_valid = False
+
+            if uploads_valid and not form.errors:
+                crag = form.save(commit=False)
+                crag.created_by = request.user
+                if request.POST.get("action") == "submit":
+                    crag.status = Crag.Status.PENDING
+                    messages.success(request, "Eingereicht. Wir prüfen den Eintrag.")
+                else:
+                    crag.status = Crag.Status.DRAFT
+                    messages.success(request, "Entwurf gespeichert.")
+                crag.save()
+                for content in converted:
+                    Photo.objects.create(
+                        crag=crag,
+                        image=content,
+                        category=photo_form.cleaned_data["category"],
+                        uploaded_by=request.user,
+                    )
+                if converted:
+                    messages.success(request, f"{len(converted)} Foto(s) hochgeladen.")
+                return redirect("crags:detail", pk=crag.pk)
     else:
         form = CragForm()
+        photo_form = BulkPhotoForm()
 
     return render(
         request,
         "crags/crag_form.html",
-        {"form": form, "title": "Neuen Felsen eintragen", "note": ""},
+        {
+            "form": form,
+            "photo_form": photo_form,
+            "allow_photo_upload": True,
+            "max_files": MAX_FILES_PER_UPLOAD,
+            "title": "Neuen Felsen eintragen",
+            "note": "",
+        },
     )
 
 

@@ -9,9 +9,19 @@
         <article><small>{{ note }}</small></article>
     {% endif %}
 
-    <form method="post">
+    <form method="post" enctype="multipart/form-data">
         {% csrf_token %}
         {{ form.as_p }}
+
+        {% if allow_photo_upload %}
+            <fieldset>
+                <legend>Fotos hinzufügen (optional)</legend>
+                {{ photo_form.as_p }}
+                <label for="id_images">Bilder (mehrere auswählbar, maximal {{ max_files }})</label>
+                <input type="file" name="images" id="id_images" multiple
+                       accept="image/jpeg,image/png,image/webp,image/heic,image/heif">
+            </fieldset>
+        {% endif %}
 
         <div class="grid">
             <button type="submit" name="action" value="draft" class="secondary">

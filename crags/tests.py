@@ -29,6 +29,12 @@ def form_data(base_area, **overrides):
     return data
 
 
+def image_upload(name):
+    image_buffer = io.BytesIO()
+    Image.new("RGB", (32, 24), "red").save(image_buffer, format="JPEG")
+    return SimpleUploadedFile(name, image_buffer.getvalue(), content_type="image/jpeg")
+
+
 class CragTestBase(TestCase):
     @classmethod
     def setUpTestData(cls):
@@ -217,6 +223,55 @@ class CreateTests(CragTestBase):
         crag = Crag.objects.get(name="Schummler")
         self.assertEqual(crag.status, Crag.Status.DRAFT)
         self.assertEqual(crag.created_by, self.bob)
+
+    def test_create_form_includes_optional_photo_upload(self):
+        self.client.force_login(self.bob)
+        response = self.client.get(reverse("crags:create"))
+
+        self.assertContains(response, 'name="images"')
+        self.assertContains(response, "Fotos hinzufügen (optional)")
+
+    def test_create_crag_with_multiple_photos(self):
+        self.client.force_login(self.bob)
+        with tempfile.TemporaryDirectory() as media_root:
+            with override_settings(MEDIA_ROOT=media_root):
+                response = self.client.post(
+                    reverse("crags:create"),
+                    {
+                        **form_data(self.area, name="Fels mit Fotos"),
+                        "category": Photo.Category.PARKING,
+                        "images": [image_upload("first.jpg"), image_upload("second.jpg")],
+                    },
+                )
+
+        crag = Crag.objects.get(name="Fels mit Fotos")
+        self.assertRedirects(response, reverse("crags:detail", args=[crag.pk]))
+        photos = Photo.objects.filter(crag=crag)
+        self.assertEqual(photos.count(), 2)
+        self.assertEqual(
+            set(photos.values_list("category", flat=True)),
+            {Photo.Category.PARKING},
+        )
+        self.assertTrue(all(photo.image.name.endswith(".webp") for photo in photos))
+
+    def test_invalid_photo_prevents_crag_creation(self):
+        self.client.force_login(self.bob)
+        response = self.client.post(
+            reverse("crags:create"),
+            {
+                **form_data(self.area, name="Ungültiges Foto"),
+                "category": Photo.Category.CRAG,
+                "images": [
+                    SimpleUploadedFile(
+                        "not-an-image.jpg", b"not an image", content_type="image/jpeg"
+                    )
+                ],
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(Crag.objects.filter(name="Ungültiges Foto").exists())
+        self.assertContains(response, "Die Datei konnte nicht als Bild gelesen werden.")
 
 
 class NewAreaTests(CragTestBase):
