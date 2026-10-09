@@ -50,7 +50,11 @@ def crag_list(request):
         crags = crags.filter(area__name=area_name)
 
     if min_rating:
-        crags = crags.filter(family_rating__gte=min_rating)
+        crags = crags.filter(
+            Q(rating_babies__gte=min_rating)
+            | Q(rating_ages_2_4__gte=min_rating)
+            | Q(rating_ages_5_plus__gte=min_rating)
+        )
 
     crags = crags.order_by("name")
     areas = (

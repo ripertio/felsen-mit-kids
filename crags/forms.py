@@ -14,6 +14,14 @@ MAX_UPLOAD_BYTES = 15 * 1024 * 1024   # 15 MB
 MAX_PIXELS = 60_000_000               # protects against decompression bombs
 MAX_EDGE = 1600                       # longest side after resize
 ALLOWED_FORMATS = {"JPEG", "PNG", "WEBP", "MPO", "HEIF"}
+RATING_CHOICES = [
+    ("", "– bitte wählen –"),
+    (1, "★ 1/5"),
+    (2, "★ 2/5"),
+    (3, "★ 3/5"),
+    (4, "★ 4/5"),
+    (5, "★ 5/5"),
+]
 
 
 def process_image(upload):
@@ -52,6 +60,49 @@ class BulkPhotoForm(forms.Form):
 
 
 class CragForm(forms.ModelForm):
+    guidebook = forms.CharField(
+        max_length=250, required=False, label="Kletterführer"
+    )
+    latitude = forms.DecimalField(
+        max_digits=9,
+        decimal_places=6,
+        min_value=-90,
+        max_value=90,
+        required=False,
+        label="Breitengrad",
+    )
+    longitude = forms.DecimalField(
+        max_digits=9,
+        decimal_places=6,
+        min_value=-180,
+        max_value=180,
+        required=False,
+        label="Längengrad",
+    )
+    parking = forms.CharField(
+        required=False,
+        widget=forms.Textarea,
+        label="Parken",
+        help_text="Parkplatzbeschreibung oder Kartenlink.",
+    )
+    rating_babies = forms.TypedChoiceField(
+        choices=RATING_CHOICES, coerce=int, empty_value=None, required=False,
+        label="Bewertung für Babys (0–1 Jahr)",
+    )
+    rating_ages_2_4 = forms.TypedChoiceField(
+        choices=RATING_CHOICES, coerce=int, empty_value=None, required=False,
+        label="Bewertung für Kinder (2–4 Jahre)",
+    )
+    rating_ages_5_plus = forms.TypedChoiceField(
+        choices=RATING_CHOICES, coerce=int, empty_value=None, required=False,
+        label="Bewertung für Kinder ab 5 Jahren",
+    )
+    approach_characteristics = forms.MultipleChoiceField(
+        choices=Crag.ApproachCharacteristic.choices,
+        required=False,
+        widget=forms.CheckboxSelectMultiple,
+        label="Merkmale des Zustiegs",
+    )
     new_area = forms.CharField(
         max_length=200,
         required=False,
@@ -63,10 +114,16 @@ class CragForm(forms.ModelForm):
         "name",
         "area",
         "new_area",
+        "guidebook",
         "description",
         "approach_minutes",
-        "stroller_friendly",
-        "family_rating",
+        "approach_characteristics",
+        "rating_babies",
+        "rating_ages_2_4",
+        "rating_ages_5_plus",
+        "latitude",
+        "longitude",
+        "parking",
         "family_notes",
         "orientation",
     ]
@@ -76,10 +133,16 @@ class CragForm(forms.ModelForm):
         fields = [
             "name",
             "area",
+            "guidebook",
             "description",
             "approach_minutes",
-            "stroller_friendly",
-            "family_rating",
+            "approach_characteristics",
+            "rating_babies",
+            "rating_ages_2_4",
+            "rating_ages_5_plus",
+            "latitude",
+            "longitude",
+            "parking",
             "family_notes",
             "orientation",
         ]
@@ -94,6 +157,27 @@ class CragForm(forms.ModelForm):
 
     def clean(self):
         cleaned = super().clean()
+        characteristics = set(cleaned.get("approach_characteristics") or [])
+        stroller_options = {
+            Crag.ApproachCharacteristic.STROLLER_FRIENDLY,
+            Crag.ApproachCharacteristic.PARTIALLY_STROLLER_FRIENDLY,
+            Crag.ApproachCharacteristic.NOT_STROLLER_FRIENDLY,
+            Crag.ApproachCharacteristic.STROLLER_UNKNOWN,
+        }
+        selected_stroller_options = characteristics & stroller_options
+        if len(selected_stroller_options) > 1:
+            self.add_error(
+                "approach_characteristics",
+                "Bitte nur eine Angabe zur Kinderwagentauglichkeit auswählen.",
+            )
+
+        latitude = cleaned.get("latitude")
+        longitude = cleaned.get("longitude")
+        if (latitude is None) != (longitude is None):
+            message = "Bitte beide Koordinaten oder keine Koordinaten angeben."
+            self.add_error("latitude", message)
+            self.add_error("longitude", message)
+
         # collapse repeated spaces: "Neue   Wand" -> "Neue Wand"
         self._new_area_name = " ".join((cleaned.get("new_area") or "").split())
         area = cleaned.get("area")

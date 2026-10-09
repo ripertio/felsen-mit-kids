@@ -183,12 +183,14 @@ Felsen finden – Felsen mit Kids
 
                 <div class="crag-meta">
 
-                    {% if crag.family_rating %}
-
-                        <span>
-                            ★ {{ crag.family_rating }}/5
-                        </span>
-
+                    {% if crag.rating_babies %}
+                        <span>Babys: ★ {{ crag.rating_babies }}/5</span>
+                    {% endif %}
+                    {% if crag.rating_ages_2_4 %}
+                        <span>2–4 Jahre: ★ {{ crag.rating_ages_2_4 }}/5</span>
+                    {% endif %}
+                    {% if crag.rating_ages_5_plus %}
+                        <span>Ab 5: ★ {{ crag.rating_ages_5_plus }}/5</span>
                     {% endif %}
 
 
@@ -201,10 +203,9 @@ Felsen finden – Felsen mit Kids
                     {% endif %}
 
 
-                    <span>
-                        Kinderwagen:
-                        {{ crag.get_stroller_friendly_display }}
-                    </span>
+                    {% for characteristic in crag.get_approach_characteristics_display %}
+                        <span>{{ characteristic }}</span>
+                    {% endfor %}
 
 
                     {% if crag.orientation %}

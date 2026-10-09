@@ -105,13 +105,11 @@
                 Familienfreundlichkeit
             </small>
 
-            <h3>
-                {% if crag.family_rating %}
-                    ★ {{ crag.family_rating }}/5
-                {% else %}
-                    –
-                {% endif %}
-            </h3>
+            <ul>
+                <li>Babys (0–1): {% if crag.rating_babies %}★ {{ crag.rating_babies }}/5{% else %}–{% endif %}</li>
+                <li>Kinder (2–4): {% if crag.rating_ages_2_4 %}★ {{ crag.rating_ages_2_4 }}/5{% else %}–{% endif %}</li>
+                <li>Ab 5 Jahren: {% if crag.rating_ages_5_plus %}★ {{ crag.rating_ages_5_plus }}/5{% else %}–{% endif %}</li>
+            </ul>
 
         </article>
 
@@ -135,13 +133,18 @@
 
         <article>
 
-            <small>
-                Kinderwagen
-            </small>
-
-            <h3>
-                {{ crag.get_stroller_friendly_display }}
-            </h3>
+            <small>Merkmale des Zustiegs</small>
+            {% with characteristics=crag.get_approach_characteristics_display %}
+                {% if characteristics %}
+                    <ul>
+                        {% for characteristic in characteristics %}
+                            <li>{{ characteristic }}</li>
+                        {% endfor %}
+                    </ul>
+                {% else %}
+                    <p>Keine Angaben</p>
+                {% endif %}
+            {% endwith %}
 
         </article>
 
@@ -165,6 +168,22 @@
     </div>
 
 </section>
+
+{% if crag.guidebook or crag.parking or crag.latitude != None or crag.longitude != None %}
+<section>
+    <h2>Weitere Informationen</h2>
+    {% if crag.guidebook %}<p><strong>Kletterführer:</strong> {{ crag.guidebook }}</p>{% endif %}
+    {% if crag.parking %}<p><strong>Parken:</strong> {{ crag.parking|linebreaksbr }}</p>{% endif %}
+    {% if crag.latitude != None and crag.longitude != None %}
+        <p>
+            <strong>Koordinaten:</strong>
+            <a href="https://www.openstreetmap.org/?mlat={{ crag.latitude }}&mlon={{ crag.longitude }}#map=16/{{ crag.latitude }}/{{ crag.longitude }}">
+                {{ crag.latitude }}, {{ crag.longitude }}
+            </a>
+        </p>
+    {% endif %}
+</section>
+{% endif %}
 
 
 

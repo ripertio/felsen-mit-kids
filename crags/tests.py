@@ -19,8 +19,14 @@ def form_data(base_area, **overrides):
         "new_area": "",
         "description": "",
         "approach_minutes": "",
-        "stroller_friendly": "UNKNOWN",
-        "family_rating": "",
+        "approach_characteristics": [],
+        "rating_babies": "",
+        "rating_ages_2_4": "",
+        "rating_ages_5_plus": "",
+        "guidebook": "",
+        "latitude": "",
+        "longitude": "",
+        "parking": "",
         "family_notes": "",
         "orientation": "",
         "action": "draft",
@@ -89,6 +95,15 @@ class PublicVisibilityTests(CragTestBase):
     def test_list_ignores_bad_filter_input(self):
         resp = self.client.get(reverse("crags:list"), {"rating": "abc", "area": "xyz"})
         self.assertEqual(resp.status_code, 200)
+
+    def test_rating_filter_matches_any_age_group(self):
+        self.pending.rating_ages_2_4 = 4
+        self.pending.save()
+
+        response = self.client.get(reverse("crags:list"), {"rating": "4"})
+
+        self.assertContains(response, "Wartend")
+        self.assertNotContains(response, "Öffentlich")
 
     def test_list_filters_by_area_name(self):
         other_area = Area.objects.create(name="Tannheimer Tal")
@@ -230,6 +245,94 @@ class CreateTests(CragTestBase):
 
         self.assertContains(response, 'name="images"')
         self.assertContains(response, "Fotos hinzufügen (optional)")
+        self.assertContains(response, '<select name="rating_babies"')
+        self.assertContains(response, "Bewertung für Babys")
+        self.assertContains(response, "Teilweise kinderwagentauglich")
+        self.assertContains(response, "Aktuellen Standort verwenden")
+        self.assertContains(response, 'data-location-status role="status"')
+
+    def test_age_ratings_save_selected_values(self):
+        self.client.force_login(self.bob)
+        self.client.post(
+            reverse("crags:create"),
+            form_data(
+                self.area,
+                name="Bewerteter Fels",
+                rating_babies="2",
+                rating_ages_2_4="3",
+                rating_ages_5_plus="4",
+            ),
+        )
+
+        crag = Crag.objects.get(name="Bewerteter Fels")
+        self.assertEqual(crag.rating_babies, 2)
+        self.assertEqual(crag.rating_ages_2_4, 3)
+        self.assertEqual(crag.rating_ages_5_plus, 4)
+
+    def test_approach_characteristics_support_partial_stroller_access(self):
+        self.client.force_login(self.bob)
+        self.client.post(
+            reverse("crags:create"),
+            form_data(
+                self.area,
+                name="Teilweise erreichbar",
+                approach_characteristics=[
+                    Crag.ApproachCharacteristic.ROCKFALL,
+                    Crag.ApproachCharacteristic.PARTIALLY_STROLLER_FRIENDLY,
+                ],
+                guidebook="Kletterführer Allgäu",
+                latitude="47.123456",
+                longitude="10.654321",
+                parking="Parkplatz am Ortsrand",
+            ),
+        )
+
+        crag = Crag.objects.get(name="Teilweise erreichbar")
+        self.assertEqual(
+            crag.approach_characteristics,
+            ["ROCKFALL", "PARTIALLY_STROLLER_FRIENDLY"],
+        )
+        self.assertEqual(crag.guidebook, "Kletterführer Allgäu")
+        self.assertEqual(str(crag.latitude), "47.123456")
+        self.assertEqual(str(crag.longitude), "10.654321")
+        self.assertEqual(crag.parking, "Parkplatz am Ortsrand")
+
+    def test_stroller_characteristics_are_mutually_exclusive(self):
+        self.client.force_login(self.bob)
+        response = self.client.post(
+            reverse("crags:create"),
+            form_data(
+                self.area,
+                name="Widersprüchliche Angaben",
+                approach_characteristics=[
+                    Crag.ApproachCharacteristic.STROLLER_FRIENDLY,
+                    Crag.ApproachCharacteristic.PARTIALLY_STROLLER_FRIENDLY,
+                ],
+            ),
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(Crag.objects.filter(name="Widersprüchliche Angaben").exists())
+        self.assertContains(
+            response,
+            "Bitte nur eine Angabe zur Kinderwagentauglichkeit auswählen.",
+        )
+
+    def test_coordinates_must_be_provided_as_a_pair(self):
+        self.client.force_login(self.bob)
+        response = self.client.post(
+            reverse("crags:create"),
+            form_data(
+                self.area,
+                name="Unvollständige Koordinaten",
+                latitude="47.123456",
+                longitude="",
+            ),
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(Crag.objects.filter(name="Unvollständige Koordinaten").exists())
+        self.assertContains(response, "Bitte beide Koordinaten oder keine Koordinaten angeben.")
 
     def test_create_crag_with_multiple_photos(self):
         self.client.force_login(self.bob)

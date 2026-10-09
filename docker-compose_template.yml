@@ -7,6 +7,8 @@ services:
     command: >
       sh -c "python manage.py collectstatic --noinput &&
              gunicorn felsen_mit_kids.wsgi:application --bind 0.0.0.0:8000"
+    # Development alternative: comment out the Gunicorn command above and uncomment this:
+    # command: python manage.py runserver 0.0.0.0:8000
 
     ports:
       - "8000:8000"

@@ -1,4 +1,5 @@
 from django.conf import settings
+from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.db import models
 import uuid
@@ -31,12 +32,6 @@ class Crag(models.Model):
        # statuses that anonymous visitors may see
     PUBLIC_STATUSES = (Status.PUBLISHED, Status.PENDING)
 
-    class StrollerFriendly(models.TextChoices):
-        YES = "YES", "Yes"
-        PARTIALLY = "PARTIALLY", "Partially"
-        NO = "NO", "No"
-        UNKNOWN = "UNKNOWN", "Unknown"
-
     class Orientation(models.TextChoices):
         N = "N", "North"
         NE = "NE", "North-East"
@@ -47,7 +42,18 @@ class Crag(models.Model):
         W = "W", "West"
         NW = "NW", "North-West"
 
-    name = models.CharField(max_length=200)
+    class ApproachCharacteristic(models.TextChoices):
+        ROCKFALL = "ROCKFALL", "Steinschlaggefahr"
+        FALL_HAZARD = "FALL_HAZARD", "Absturzgefahr"
+        STROLLER_FRIENDLY = "STROLLER_FRIENDLY", "Kinderwagentauglich"
+        PARTIALLY_STROLLER_FRIENDLY = (
+            "PARTIALLY_STROLLER_FRIENDLY",
+            "Teilweise kinderwagentauglich",
+        )
+        NOT_STROLLER_FRIENDLY = "NOT_STROLLER_FRIENDLY", "Nicht kinderwagentauglich"
+        STROLLER_UNKNOWN = "STROLLER_UNKNOWN", "Kinderwagentauglichkeit unbekannt"
+
+    name = models.CharField(max_length=160)
 
     area = models.ForeignKey(
         Area,
@@ -62,13 +68,12 @@ class Crag(models.Model):
         blank=True,
     )
 
-    stroller_friendly = models.CharField(
-        max_length=10,
-        choices=StrollerFriendly.choices,
-        default=StrollerFriendly.UNKNOWN,
+    approach_characteristics = models.JSONField(
+        default=list,
+        blank=True,
     )
 
-    family_rating = models.PositiveSmallIntegerField(
+    rating_babies = models.PositiveSmallIntegerField(
         validators=[
             MinValueValidator(1),
             MaxValueValidator(5),
@@ -76,6 +81,44 @@ class Crag(models.Model):
         null=True,
         blank=True,
     )
+
+    rating_ages_2_4 = models.PositiveSmallIntegerField(
+        validators=[
+            MinValueValidator(1),
+            MaxValueValidator(5),
+        ],
+        null=True,
+        blank=True,
+    )
+
+    rating_ages_5_plus = models.PositiveSmallIntegerField(
+        validators=[
+            MinValueValidator(1),
+            MaxValueValidator(5),
+        ],
+        null=True,
+        blank=True,
+    )
+
+    guidebook = models.CharField(max_length=250, blank=True)
+
+    latitude = models.DecimalField(
+        max_digits=9,
+        decimal_places=6,
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(-90), MaxValueValidator(90)],
+    )
+
+    longitude = models.DecimalField(
+        max_digits=9,
+        decimal_places=6,
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(-180), MaxValueValidator(180)],
+    )
+
+    parking = models.TextField(blank=True)
 
     family_notes = models.TextField(blank=True)
 
@@ -105,11 +148,48 @@ class Crag(models.Model):
 
     objects = CragQuerySet.as_manager()
 
+    def clean(self):
+        super().clean()
+        characteristics = self.approach_characteristics
+        allowed = {value for value, _ in self.ApproachCharacteristic.choices}
+        if not isinstance(characteristics, list) or any(
+            not isinstance(value, str) or value not in allowed
+            for value in characteristics
+        ):
+            raise ValidationError(
+                {"approach_characteristics": "Ungültige Merkmale des Zustiegs."}
+            )
+        if len(characteristics) != len(set(characteristics)):
+            raise ValidationError(
+                {"approach_characteristics": "Merkmale dürfen nicht doppelt vorkommen."}
+            )
+
+        stroller_options = {
+            self.ApproachCharacteristic.STROLLER_FRIENDLY,
+            self.ApproachCharacteristic.PARTIALLY_STROLLER_FRIENDLY,
+            self.ApproachCharacteristic.NOT_STROLLER_FRIENDLY,
+            self.ApproachCharacteristic.STROLLER_UNKNOWN,
+        }
+        if len(set(characteristics) & stroller_options) > 1:
+            raise ValidationError(
+                {
+                    "approach_characteristics":
+                        "Nur eine Angabe zur Kinderwagentauglichkeit auswählen."
+                }
+            )
+
+        if (self.latitude is None) != (self.longitude is None):
+            raise ValidationError("Breiten- und Längengrad müssen zusammen angegeben werden.")
+
     class Meta:
         ordering = ["name"]
 
     def __str__(self):
         return self.name
+
+    def get_approach_characteristics_display(self):
+        labels = dict(self.ApproachCharacteristic.choices)
+        return [labels[value] for value in self.approach_characteristics if value in labels]
 
 
 class Photo(models.Model):
@@ -118,6 +198,7 @@ class Photo(models.Model):
         BASE_AREA = "BASE_AREA", "Platz am Wandfuß"
         APPROACH = "APPROACH", "Zustieg"
         PARKING = "PARKING", "Parkplatz"
+        TERRAIN = "TERRAIN", "Umgebung"
         OTHER = "OTHER", "Sonstiges"
 
     crag = models.ForeignKey(
