@@ -5,7 +5,8 @@ services:
       dockerfile: Dockerfile
 
     command: >
-      python manage.py runserver 0.0.0.0:8000
+      sh -c "python manage.py collectstatic --noinput &&
+             gunicorn felsen_mit_kids.wsgi:application --bind 0.0.0.0:8000"
 
     ports:
       - "8000:8000"
@@ -48,4 +49,3 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
-

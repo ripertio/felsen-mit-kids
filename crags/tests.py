@@ -327,7 +327,7 @@ class PhotoUploadTests(CragTestBase):
         self.assertContains(response, 'href="/media/%s"' % photo.image.name)
         self.assertContains(response, 'dialog class="photo-gallery"')
         self.assertContains(response, "data-gallery-next")
-        self.assertContains(response, "js/photo-gallery.js")
+        self.assertContains(response, "/static/js/photo-gallery.")
 
     def test_owner_can_upload_multiple_photos(self):
         image_buffer = io.BytesIO()
