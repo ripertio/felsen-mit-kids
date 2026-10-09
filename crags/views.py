@@ -75,16 +75,33 @@ def crag_list(request):
 
 def crag_detail(request, pk):
     crag = get_object_or_404(
-        visible_crags(request.user).prefetch_related("photos"),
+        visible_crags(request.user).prefetch_related(
+            "photos", "approach_features", "base_features"
+        ),
         pk=pk,
     )
+    approach_features = list(crag.approach_features.all())
+    base_features = list(crag.base_features.all())
     can_edit = request.user.is_authenticated and (
         request.user.is_staff or crag.created_by_id == request.user.id
     )
     return render(
         request,
         "crags/crag_detail.html",
-        {"crag": crag, "can_edit": can_edit},
+        {
+            "crag": crag,
+            "can_edit": can_edit,
+            "approach_features": approach_features,
+            "approach_stroller_friendly": any(
+                feature.slug == "stroller_friendly"
+                for feature in approach_features
+            ),
+            "base_features": base_features,
+            "base_stroller_friendly": any(
+                feature.slug == "stroller_friendly"
+                for feature in base_features
+            ),
+        },
     )
 
 
@@ -111,7 +128,7 @@ def crag_create(request):
             if len(uploads) > MAX_FILES_PER_UPLOAD:
                 uploads_valid = False
                 form.add_error(
-                    None, f"Maximal {MAX_FILES_PER_UPLOAD} Bilder auf einmal."
+                    None, f"Select no more than {MAX_FILES_PER_UPLOAD} images at a time."
                 )
             elif uploads:
                 if photo_form.is_valid():
@@ -129,11 +146,12 @@ def crag_create(request):
                 crag.created_by = request.user
                 if request.POST.get("action") == "submit":
                     crag.status = Crag.Status.PENDING
-                    messages.success(request, "Eingereicht. Wir prüfen den Eintrag.")
+                    messages.success(request, "Submitted. We will review this crag.")
                 else:
                     crag.status = Crag.Status.DRAFT
-                    messages.success(request, "Entwurf gespeichert.")
+                    messages.success(request, "Draft saved.")
                 crag.save()
+                form.save_m2m()
                 for content in converted:
                     Photo.objects.create(
                         crag=crag,
@@ -142,7 +160,7 @@ def crag_create(request):
                         uploaded_by=request.user,
                     )
                 if converted:
-                    messages.success(request, f"{len(converted)} Foto(s) hochgeladen.")
+                    messages.success(request, f"Uploaded {len(converted)} photo(s).")
                 return redirect("crags:detail", pk=crag.pk)
     else:
         form = CragForm()
@@ -156,7 +174,7 @@ def crag_create(request):
             "photo_form": photo_form,
             "allow_photo_upload": True,
             "max_files": MAX_FILES_PER_UPLOAD,
-            "title": "Neuen Felsen eintragen",
+            "title": "Add a new crag",
             "note": "",
         },
     )
@@ -177,14 +195,15 @@ def crag_edit(request, pk):
                     # any change to a published crag needs a new review
                     crag.status = Crag.Status.PENDING
             crag.save()
-            messages.success(request, "Gespeichert.")
+            form.save_m2m()
+            messages.success(request, "Changes saved.")
             return redirect("crags:detail", pk=crag.pk)
     else:
         form = CragForm(instance=crag)
 
     note = ""
     if crag.status == Crag.Status.PUBLISHED and not request.user.is_staff:
-        note = "Änderungen an veröffentlichten Felsen werden erneut geprüft."
+        note = "Changes to published crags will be reviewed again."
 
     return render(
         request,
@@ -198,7 +217,7 @@ def photo_add(request, pk):
     crag = get_object_or_404(editable_crags(request.user), pk=pk)
 
     if not request.user.is_staff and crag.photos.count() >= MAX_PHOTOS_PER_CRAG:
-        messages.error(request, f"Maximal {MAX_PHOTOS_PER_CRAG} Fotos pro Felsen.")
+        messages.error(request, f"A crag can have no more than {MAX_PHOTOS_PER_CRAG} photos.")
         return redirect("crags:detail", pk=crag.pk)
 
     if request.method == "POST":
@@ -207,14 +226,17 @@ def photo_add(request, pk):
         existing = crag.photos.count()
 
         if not uploads:
-            messages.error(request, "Bitte mindestens ein Bild auswählen.")
+            messages.error(request, "Please select at least one image.")
         elif len(uploads) > MAX_FILES_PER_UPLOAD:
-            messages.error(request, f"Maximal {MAX_FILES_PER_UPLOAD} Bilder auf einmal.")
+            messages.error(
+                request,
+                f"Select no more than {MAX_FILES_PER_UPLOAD} images at a time.",
+            )
         elif not request.user.is_staff and existing + len(uploads) > MAX_PHOTOS_PER_CRAG:
             messages.error(
                 request,
-                f"Maximal {MAX_PHOTOS_PER_CRAG} Fotos pro Felsen. "
-                f"Noch {MAX_PHOTOS_PER_CRAG - existing} möglich.",
+                f"A crag can have no more than {MAX_PHOTOS_PER_CRAG} photos. "
+                f"You can add {MAX_PHOTOS_PER_CRAG - existing} more.",
             )
         elif form.is_valid():
             converted, errors = [], []
@@ -235,7 +257,7 @@ def photo_add(request, pk):
                         category=form.cleaned_data["category"],
                         uploaded_by=request.user,
                     )
-                messages.success(request, f"{len(converted)} Foto(s) hochgeladen.")
+                messages.success(request, f"Uploaded {len(converted)} photo(s).")
                 return redirect("crags:detail", pk=crag.pk)
     else:
         form = BulkPhotoForm()
@@ -255,5 +277,5 @@ def photo_delete(request, pk):
     crag_pk = photo.crag_id
     photo.image.delete(save=False)  # also remove the file from disk
     photo.delete()
-    messages.success(request, "Foto gelöscht.")
+    messages.success(request, "Photo deleted.")
     return redirect("crags:detail", pk=crag_pk)

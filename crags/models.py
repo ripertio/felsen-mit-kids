@@ -15,6 +15,15 @@ class Area(models.Model):
     def __str__(self):
         return self.name
 
+
+class Feature(models.Model):
+    slug = models.SlugField(unique=True)
+    label = models.CharField(max_length=80)
+
+    def __str__(self):
+        return self.label
+
+
 class CragQuerySet(models.QuerySet):
     def published(self):
         return self.filter(status=Crag.Status.PUBLISHED)
@@ -42,17 +51,6 @@ class Crag(models.Model):
         W = "W", "West"
         NW = "NW", "North-West"
 
-    class ApproachCharacteristic(models.TextChoices):
-        ROCKFALL = "ROCKFALL", "Steinschlaggefahr"
-        FALL_HAZARD = "FALL_HAZARD", "Absturzgefahr"
-        STROLLER_FRIENDLY = "STROLLER_FRIENDLY", "Kinderwagentauglich"
-        PARTIALLY_STROLLER_FRIENDLY = (
-            "PARTIALLY_STROLLER_FRIENDLY",
-            "Teilweise kinderwagentauglich",
-        )
-        NOT_STROLLER_FRIENDLY = "NOT_STROLLER_FRIENDLY", "Nicht kinderwagentauglich"
-        STROLLER_UNKNOWN = "STROLLER_UNKNOWN", "Kinderwagentauglichkeit unbekannt"
-
     name = models.CharField(max_length=160)
 
     area = models.ForeignKey(
@@ -65,11 +63,6 @@ class Crag(models.Model):
 
     approach_minutes = models.PositiveIntegerField(
         null=True,
-        blank=True,
-    )
-
-    approach_characteristics = models.JSONField(
-        default=list,
         blank=True,
     )
 
@@ -99,6 +92,22 @@ class Crag(models.Model):
         null=True,
         blank=True,
     )
+
+    approach_features = models.ManyToManyField(
+        Feature,
+        blank=True,
+        related_name="+",
+    )
+
+    approach_assessed = models.BooleanField(default=False)
+
+    base_features = models.ManyToManyField(
+        Feature,
+        blank=True,
+        related_name="+",
+    )
+
+    base_assessed = models.BooleanField(default=False)
 
     guidebook = models.CharField(max_length=250, blank=True)
 
@@ -150,36 +159,8 @@ class Crag(models.Model):
 
     def clean(self):
         super().clean()
-        characteristics = self.approach_characteristics
-        allowed = {value for value, _ in self.ApproachCharacteristic.choices}
-        if not isinstance(characteristics, list) or any(
-            not isinstance(value, str) or value not in allowed
-            for value in characteristics
-        ):
-            raise ValidationError(
-                {"approach_characteristics": "Ungültige Merkmale des Zustiegs."}
-            )
-        if len(characteristics) != len(set(characteristics)):
-            raise ValidationError(
-                {"approach_characteristics": "Merkmale dürfen nicht doppelt vorkommen."}
-            )
-
-        stroller_options = {
-            self.ApproachCharacteristic.STROLLER_FRIENDLY,
-            self.ApproachCharacteristic.PARTIALLY_STROLLER_FRIENDLY,
-            self.ApproachCharacteristic.NOT_STROLLER_FRIENDLY,
-            self.ApproachCharacteristic.STROLLER_UNKNOWN,
-        }
-        if len(set(characteristics) & stroller_options) > 1:
-            raise ValidationError(
-                {
-                    "approach_characteristics":
-                        "Nur eine Angabe zur Kinderwagentauglichkeit auswählen."
-                }
-            )
-
         if (self.latitude is None) != (self.longitude is None):
-            raise ValidationError("Breiten- und Längengrad müssen zusammen angegeben werden.")
+            raise ValidationError("Latitude and longitude must be provided together.")
 
     class Meta:
         ordering = ["name"]
@@ -187,19 +168,14 @@ class Crag(models.Model):
     def __str__(self):
         return self.name
 
-    def get_approach_characteristics_display(self):
-        labels = dict(self.ApproachCharacteristic.choices)
-        return [labels[value] for value in self.approach_characteristics if value in labels]
-
-
 class Photo(models.Model):
     class Category(models.TextChoices):
-        CRAG = "CRAG", "Fels"
-        BASE_AREA = "BASE_AREA", "Platz am Wandfuß"
-        APPROACH = "APPROACH", "Zustieg"
-        PARKING = "PARKING", "Parkplatz"
-        TERRAIN = "TERRAIN", "Umgebung"
-        OTHER = "OTHER", "Sonstiges"
+        CRAG = "CRAG", "Crag"
+        BASE_AREA = "BASE_AREA", "Base area"
+        APPROACH = "APPROACH", "Approach"
+        PARKING = "PARKING", "Parking"
+        TERRAIN = "TERRAIN", "Surroundings"
+        OTHER = "OTHER", "Other"
 
     crag = models.ForeignKey(
         Crag,

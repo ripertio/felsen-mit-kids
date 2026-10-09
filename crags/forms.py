@@ -8,7 +8,7 @@ from django.core.files.base import ContentFile
 from PIL import Image, ImageOps, UnidentifiedImageError
 import pillow_heif
 
-from .models import Area, Crag, Photo
+from .models import Area, Crag, Feature, Photo
 
 pillow_heif.register_heif_opener()
 
@@ -17,7 +17,7 @@ MAX_PIXELS = 60_000_000               # protects against decompression bombs
 MAX_EDGE = 1600                       # longest side after resize
 ALLOWED_FORMATS = {"JPEG", "PNG", "WEBP", "MPO", "HEIF"}
 RATING_CHOICES = [
-    ("", "– bitte wählen –"),
+    ("", "– Please select –"),
     (1, "★ 1/5"),
     (2, "★ 2/5"),
     (3, "★ 3/5"),
@@ -46,8 +46,8 @@ def parse_coordinates(value):
         match = COORDINATE_PAIR_RE.search(value)
     if match is None:
         raise ValidationError(
-            "Bitte Koordinaten wie „47.123456, 10.123456“ oder einen "
-            "vollständigen Google-Maps-Link eingeben."
+            "Enter coordinates such as “47.123456, 10.123456” or a full "
+            "Google Maps link."
         )
 
     try:
@@ -57,12 +57,11 @@ def parse_coordinates(value):
         latitude = latitude.quantize(precision, rounding=ROUND_HALF_UP)
         longitude = longitude.quantize(precision, rounding=ROUND_HALF_UP)
     except InvalidOperation:
-        raise ValidationError("Die Koordinaten sind ungültig oder zu genau.")
+        raise ValidationError("The coordinates are invalid or too precise.")
 
     if not -90 <= latitude <= 90 or not -180 <= longitude <= 180:
         raise ValidationError(
-            "Breitengrad muss zwischen −90 und 90 und "
-            "Längengrad zwischen −180 und 180 liegen."
+            "Latitude must be between −90 and 90 and longitude between −180 and 180."
         )
 
     return latitude, longitude
@@ -71,17 +70,17 @@ def parse_coordinates(value):
 def process_image(upload):
     """Validate an upload and return it as a resized WEBP ContentFile."""
     if upload.size > MAX_UPLOAD_BYTES:
-        raise ValidationError("Das Bild ist zu groß (maximal 15 MB).")
+        raise ValidationError("The image is too large (maximum 15 MB).")
 
     try:
         upload.seek(0)
         img = Image.open(upload)
         if img.format not in ALLOWED_FORMATS:
             raise ValidationError(
-                "Bitte ein JPG-, PNG-, WebP- oder HEIC-Bild hochladen."
+                "Please upload a JPG, PNG, WebP, or HEIC image."
             )
         if img.width * img.height > MAX_PIXELS:
-            raise ValidationError("Das Bild hat zu viele Pixel.")
+            raise ValidationError("The image has too many pixels.")
 
         img = ImageOps.exif_transpose(img)
         img = img.convert("RGB")
@@ -90,7 +89,7 @@ def process_image(upload):
         buffer = io.BytesIO()
         img.save(buffer, format="WEBP", quality=80, method=4)
     except (UnidentifiedImageError, OSError, Image.DecompressionBombError):
-        raise ValidationError("Die Datei konnte nicht als Bild gelesen werden.")
+        raise ValidationError("The file could not be read as an image.")
 
     return ContentFile(buffer.getvalue(), name="photo.webp")
 
@@ -99,51 +98,65 @@ class BulkPhotoForm(forms.Form):
     category = forms.ChoiceField(
         choices=Photo.Category.choices,
         initial=Photo.Category.CRAG,
-        label="Kategorie",
+        label="Category",
     )
 
 
 class CragForm(forms.ModelForm):
     guidebook = forms.CharField(
-        max_length=250, required=False, label="Kletterführer"
+        max_length=250, required=False, label="Guidebook"
     )
     location = forms.CharField(
         required=False,
-        label="Fels Koordinaten",
+        label="Crag coordinates",
         help_text=(
-            "Google-Maps-Link oder Koordinaten, z. B. 47.123456, 10.123456. "
-            "Kurzlinks werden nicht unterstützt."
+            "Google Maps link or coordinates, e.g. 47.123456, 10.123456. "
+            "Short links are not supported."
         ),
     )
     parking = forms.CharField(
         required=False,
         widget=forms.Textarea,
-        label="Parken",
-        help_text="Parkplatzbeschreibung oder Kartenlink.",
+        label="Parking",
+        help_text="Parking details or a map link.",
     )
     rating_babies = forms.TypedChoiceField(
         choices=RATING_CHOICES, coerce=int, empty_value=None, required=False,
-        label="Bewertung für Babys (0–1 Jahr)",
+        label="Rating for babies (0–1 years)",
     )
     rating_ages_2_4 = forms.TypedChoiceField(
         choices=RATING_CHOICES, coerce=int, empty_value=None, required=False,
-        label="Bewertung für Kinder (2–4 Jahre)",
+        label="Rating for children (2–4 years)",
     )
     rating_ages_5_plus = forms.TypedChoiceField(
         choices=RATING_CHOICES, coerce=int, empty_value=None, required=False,
-        label="Bewertung für Kinder ab 5 Jahren",
+        label="Rating for children aged 5 and older",
     )
-    approach_characteristics = forms.MultipleChoiceField(
-        choices=Crag.ApproachCharacteristic.choices,
+    approach_assessed = forms.BooleanField(
+        required=False,
+        label="I have assessed the approach",
+    )
+    approach_features = forms.ModelMultipleChoiceField(
+        queryset=Feature.objects.all(),
         required=False,
         widget=forms.CheckboxSelectMultiple,
-        label="Merkmale des Zustiegs",
+        label="",
+    )
+    base_assessed = forms.BooleanField(
+        required=False,
+        label="I have assessed the base",
+    )
+    base_features = forms.ModelMultipleChoiceField(
+        queryset=Feature.objects.all(),
+        required=False,
+        widget=forms.CheckboxSelectMultiple,
+        label="",
     )
     new_area = forms.CharField(
         max_length=200,
         required=False,
-        label="Oder neues Gebiet",
-        help_text="Nur ausfüllen, wenn das Gebiet oben nicht in der Liste ist.",
+        label="Or add a new area",
+        help_text="Only fill this in if the area is not listed above.",
     )
 
     field_order = [
@@ -153,7 +166,10 @@ class CragForm(forms.ModelForm):
         "guidebook",
         "description",
         "approach_minutes",
-        "approach_characteristics",
+        "approach_assessed",
+        "approach_features",
+        "base_assessed",
+        "base_features",
         "rating_babies",
         "rating_ages_2_4",
         "rating_ages_5_plus",
@@ -171,7 +187,10 @@ class CragForm(forms.ModelForm):
             "guidebook",
             "description",
             "approach_minutes",
-            "approach_characteristics",
+            "approach_assessed",
+            "approach_features",
+            "base_assessed",
+            "base_features",
             "rating_babies",
             "rating_ages_2_4",
             "rating_ages_5_plus",
@@ -192,23 +211,14 @@ class CragForm(forms.ModelForm):
         # Either the dropdown or the text field is enough, so neither is required alone.
         # The clean() method below enforces "exactly one of them".
         self.fields["area"].required = False
-        self.fields["area"].empty_label = "– bitte wählen –"
+        self.fields["area"].empty_label = "– Please select –"
 
     def clean(self):
         cleaned = super().clean()
-        characteristics = set(cleaned.get("approach_characteristics") or [])
-        stroller_options = {
-            Crag.ApproachCharacteristic.STROLLER_FRIENDLY,
-            Crag.ApproachCharacteristic.PARTIALLY_STROLLER_FRIENDLY,
-            Crag.ApproachCharacteristic.NOT_STROLLER_FRIENDLY,
-            Crag.ApproachCharacteristic.STROLLER_UNKNOWN,
-        }
-        selected_stroller_options = characteristics & stroller_options
-        if len(selected_stroller_options) > 1:
-            self.add_error(
-                "approach_characteristics",
-                "Bitte nur eine Angabe zur Kinderwagentauglichkeit auswählen.",
-            )
+        if cleaned.get("approach_features"):
+            cleaned["approach_assessed"] = True
+        if cleaned.get("base_features"):
+            cleaned["base_assessed"] = True
 
         try:
             self._coordinates = parse_coordinates(cleaned.get("location"))
@@ -222,12 +232,12 @@ class CragForm(forms.ModelForm):
         if self._new_area_name and area:
             self.add_error(
                 "new_area",
-                "Bitte entweder ein Gebiet auswählen oder ein neues eintragen, nicht beides.",
+                "Select an area or enter a new one, not both.",
             )
         elif not self._new_area_name and not area:
             self.add_error(
                 "area",
-                "Bitte ein Gebiet auswählen oder ein neues eintragen.",
+                "Select an area or enter a new one.",
             )
         return cleaned
 

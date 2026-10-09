@@ -1,12 +1,18 @@
 from django.contrib import admin
 
-from .models import Area, Crag, Photo
+from .models import Area, Crag, Feature, Photo
 
 
 @admin.register(Area)
 class AreaAdmin(admin.ModelAdmin):
     list_display = ("name",)
     search_fields = ("name",)
+
+
+@admin.register(Feature)
+class FeatureAdmin(admin.ModelAdmin):
+    list_display = ("label", "slug")
+    search_fields = ("label", "slug")
 
 
 

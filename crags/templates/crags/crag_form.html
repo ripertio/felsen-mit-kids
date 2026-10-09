@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}{{ title }} – Felsen mit Kids{% endblock %}
+{% block title %}{{ title }} – gr8base community{% endblock %}
 
 {% block content %}
     <h1>{{ title }}</h1>
@@ -13,20 +13,27 @@
         {% csrf_token %}
         {{ form.non_field_errors }}
         {% for field in form %}
+            {% if field.name == "approach_assessed" or field.name == "base_assessed" %}
+                <fieldset>
+                    <legend>Known hazards / features</legend>
+            {% endif %}
             {{ field.as_field_group }}
             {% if field.name == "location" %}
                 <button type="button" class="outline" data-use-current-location>
-                    Aktuellen Standort verwenden
+                    Use my current location
                 </button>
                 <small data-location-status role="status" aria-live="polite"></small>
+            {% endif %}
+            {% if field.name == "approach_features" or field.name == "base_features" %}
+                </fieldset>
             {% endif %}
         {% endfor %}
 
         {% if allow_photo_upload %}
             <fieldset>
-                <legend>Fotos hinzufügen (optional)</legend>
+                <legend>Add photos (optional)</legend>
                 {{ photo_form.as_p }}
-                <label for="id_images">Bilder (mehrere auswählbar, maximal {{ max_files }})</label>
+                <label for="id_images">Images (select multiple, up to {{ max_files }})</label>
                 <input type="file" name="images" id="id_images" multiple
                        accept="image/jpeg,image/png,image/webp,image/heic,image/heif">
             </fieldset>
@@ -34,10 +41,10 @@
 
         <div class="grid">
             <button type="submit" name="action" value="draft" class="secondary">
-                Als Entwurf speichern
+                Save as draft
             </button>
             <button type="submit" name="action" value="submit">
-                Zur Prüfung einreichen
+                Submit for review
             </button>
         </div>
     </form>

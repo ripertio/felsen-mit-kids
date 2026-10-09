@@ -6,6 +6,9 @@
 .photo-grid{grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:1rem}
 .photo-grid figure,.nav-form{margin:0}
 .photo-grid img{width:100%;aspect-ratio:4/3;object-fit:cover;border-radius:var(--pico-border-radius)}
+.assessment-neutral{color:var(--pico-muted-color)}
+.assessment-warning{color:#9a3412;font-weight:600}
+.assessment-positive{color:#166534;font-weight:600}
 .gallery-trigger{display:block}
 .photo-gallery{width:min(96vw,1100px);max-width:none;height:min(94vh,850px);padding:1rem;border:0;border-radius:var(--pico-border-radius);background:#111;color:#fff}
 .photo-gallery::backdrop{background:rgb(0 0 0/.88)}

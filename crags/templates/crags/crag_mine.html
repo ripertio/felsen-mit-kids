@@ -1,11 +1,11 @@
 {% extends "base.html" %}
 
-{% block title %}Meine Felsen – Felsen mit Kids{% endblock %}
+{% block title %}My crags – gr8base community{% endblock %}
 
 {% block content %}
-    <h1>Meine Felsen</h1>
+    <h1>My crags</h1>
 
-    <p><a href="{% url 'crags:create' %}" role="button">Neuen Felsen eintragen</a></p>
+    <p><a href="{% url 'crags:create' %}" role="button">Add a new crag</a></p>
 
     {% for crag in crags %}
         <article>
@@ -15,10 +15,10 @@
             </header>
             {{ crag.area.name }}
             <footer>
-                <a href="{% url 'crags:edit' crag.pk %}">Bearbeiten</a>
+                <a href="{% url 'crags:edit' crag.pk %}">Edit</a>
             </footer>
         </article>
     {% empty %}
-        <p>Du hast noch keine Felsen eingetragen.</p>
+        <p>You haven't added any crags yet.</p>
     {% endfor %}
 {% endblock %}

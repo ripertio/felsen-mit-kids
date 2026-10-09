@@ -7,19 +7,19 @@
 
     button.addEventListener("click", () => {
         if (!navigator.geolocation) {
-            status.textContent = "Standortbestimmung wird von diesem Browser nicht unterstützt.";
+            status.textContent = "Location services are not supported by this browser.";
             return;
         }
 
         button.disabled = true;
-        status.textContent = "Standort wird ermittelt …";
+        status.textContent = "Getting your location…";
 
         navigator.geolocation.getCurrentPosition(
             (position) => {
                 const location = document.querySelector('[name="location"]');
                 if (!location) {
                     button.disabled = false;
-                    status.textContent = "Das Standortfeld wurde nicht gefunden.";
+                    status.textContent = "The location field could not be found.";
                     return;
                 }
 
@@ -27,18 +27,18 @@
                 location.dispatchEvent(new Event("input", { bubbles: true }));
                 location.dispatchEvent(new Event("change", { bubbles: true }));
                 button.disabled = false;
-                status.textContent = "Standort übernommen.";
+                status.textContent = "Location added.";
             },
             (error) => {
                 button.disabled = false;
                 if (error.code === error.PERMISSION_DENIED) {
-                    status.textContent = "Standortzugriff wurde nicht erlaubt.";
+                    status.textContent = "Location access was denied.";
                 } else if (error.code === error.POSITION_UNAVAILABLE) {
-                    status.textContent = "Der Standort ist derzeit nicht verfügbar.";
+                    status.textContent = "Your location is currently unavailable.";
                 } else if (error.code === error.TIMEOUT) {
-                    status.textContent = "Die Standortbestimmung hat zu lange gedauert.";
+                    status.textContent = "Location detection timed out.";
                 } else {
-                    status.textContent = "Standort konnte nicht ermittelt werden.";
+                    status.textContent = "Could not determine your location.";
                 }
             },
             { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 },

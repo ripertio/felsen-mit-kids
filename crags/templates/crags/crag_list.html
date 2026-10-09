@@ -2,7 +2,7 @@
 
 
 {% block title %}
-Felsen finden – Felsen mit Kids
+Find crags – gr8base community
 {% endblock %}
 
 
@@ -10,11 +10,10 @@ Felsen finden – Felsen mit Kids
 
 <section>
 
-    <h1>Felsen finden</h1>
+    <h1>Find crags</h1>
 
     <p>
-        Finde familienfreundliche Kletterfelsen
-        für euren nächsten Ausflug.
+        Find family-friendly climbing crags for your next outing.
     </p>
 
 </section>
@@ -28,8 +27,8 @@ Felsen finden – Felsen mit Kids
             type="search"
             name="q"
             value="{{ query }}"
-            placeholder="Fels oder Gebiet suchen..."
-            aria-label="Fels oder Gebiet suchen"
+            placeholder="Search crags or areas..."
+            aria-label="Search crags or areas"
         >
 
 
@@ -37,11 +36,11 @@ Felsen finden – Felsen mit Kids
 
             <select
                 name="area"
-                aria-label="Gebiet"
+                aria-label="Area"
             >
 
                 <option value="">
-                    Alle Gebiete
+                    All areas
                 </option>
 
                 {% for area in areas %}
@@ -62,46 +61,46 @@ Felsen finden – Felsen mit Kids
 
             <select
                 name="rating"
-                aria-label="Familienfreundlichkeit"
+                aria-label="Family rating"
             >
 
                 <option value="">
-                    Familienfreundlichkeit
+                    Family rating
                 </option>
 
                 <option
                     value="5"
                     {% if selected_rating == "5" %}selected{% endif %}
                 >
-                    5 Sterne
+                    5 stars
                 </option>
 
                 <option
                     value="4"
                     {% if selected_rating == "4" %}selected{% endif %}
                 >
-                    4+ Sterne
+                    4+ stars
                 </option>
 
                 <option
                     value="3"
                     {% if selected_rating == "3" %}selected{% endif %}
                 >
-                    3+ Sterne
+                    3+ stars
                 </option>
 
                 <option
                     value="2"
                     {% if selected_rating == "2" %}selected{% endif %}
                 >
-                    2+ Sterne
+                    2+ stars
                 </option>
 
                 <option
                     value="1"
                     {% if selected_rating == "1" %}selected{% endif %}
                 >
-                    1+ Sterne
+                    1+ stars
                 </option>
 
             </select>
@@ -112,7 +111,7 @@ Felsen finden – Felsen mit Kids
         <div class="grid">
 
             <button type="submit">
-                Suchen
+                Search
             </button>
 
             <a
@@ -120,7 +119,7 @@ Felsen finden – Felsen mit Kids
                 role="button"
                 class="secondary outline"
             >
-                Filter zurücksetzen
+                Clear filters
             </a>
 
         </div>
@@ -134,7 +133,7 @@ Felsen finden – Felsen mit Kids
 
     <p>
         <strong>{{ crags|length }}</strong>
-        Felsen gefunden
+        crags found
     </p>
 
 
@@ -171,7 +170,7 @@ Felsen finden – Felsen mit Kids
                         <a href="{% url 'crags:detail' crag.pk %}">
                             {{ crag.name }}
                         </a>
-                        {% if crag.status == "PENDING" %}<small><mark>ungeprüft</mark></small>{% endif %}
+                        {% if crag.status == "PENDING" %}<small><mark>Pending review</mark></small>{% endif %}
                     </h2>
 
                     <span class="area">
@@ -184,13 +183,13 @@ Felsen finden – Felsen mit Kids
                 <div class="crag-meta">
 
                     {% if crag.rating_babies %}
-                        <span>Babys: ★ {{ crag.rating_babies }}/5</span>
+                        <span>Babies: ★ {{ crag.rating_babies }}/5</span>
                     {% endif %}
                     {% if crag.rating_ages_2_4 %}
-                        <span>2–4 Jahre: ★ {{ crag.rating_ages_2_4 }}/5</span>
+                        <span>Ages 2–4: ★ {{ crag.rating_ages_2_4 }}/5</span>
                     {% endif %}
                     {% if crag.rating_ages_5_plus %}
-                        <span>Ab 5: ★ {{ crag.rating_ages_5_plus }}/5</span>
+                        <span>Ages 5+: ★ {{ crag.rating_ages_5_plus }}/5</span>
                     {% endif %}
 
 
@@ -203,15 +202,10 @@ Felsen finden – Felsen mit Kids
                     {% endif %}
 
 
-                    {% for characteristic in crag.get_approach_characteristics_display %}
-                        <span>{{ characteristic }}</span>
-                    {% endfor %}
-
-
                     {% if crag.orientation %}
 
                         <span>
-                            Ausrichtung:
+                            Aspect:
                             {{ crag.get_orientation_display }}
                         </span>
 
@@ -227,7 +221,7 @@ Felsen finden – Felsen mit Kids
             <article>
 
                 <p>
-                    Keine passenden Felsen gefunden.
+                    No matching crags found.
                 </p>
 
             </article>

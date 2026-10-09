@@ -1,7 +1,7 @@
 {% load static %}
 
 <!DOCTYPE html>
-<html lang="de">
+<html lang="en">
 
 <head>
     <meta charset="UTF-8">
@@ -13,12 +13,12 @@
 
     <meta
         name="description"
-        content="Felsen mit Kids – familienfreundliche Kletterfelsen finden und teilen."
+        content="gr8base community – find and share family-friendly climbing crags."
     >
 
     <title>
         {% block title %}
-            Felsen mit Kids
+            gr8base community
         {% endblock %}
     </title>
 
@@ -45,21 +45,21 @@
             <ul>
                 <li>
                     <strong>
-                        <a href="{% url 'home' %}" class="brand">Felsen mit Kids</a>
+                        <a href="{% url 'home' %}" class="brand">gr8base community</a>
                     </strong>
                 </li>
             </ul>
 
-            <input type="checkbox" id="nav-toggle" class="nav-toggle" aria-label="Menü öffnen oder schließen">
+            <input type="checkbox" id="nav-toggle" class="nav-toggle" aria-label="Open or close menu">
             <label for="nav-toggle" class="nav-burger" aria-hidden="true">☰</label>
 
             <ul class="nav-links">
-                <li><a href="{% url 'crags:list' %}">Felsen</a></li>
-                <li><a href="{% url 'docs' %}">Hilfe</a></li>
+                <li><a href="{% url 'crags:list' %}">Crags</a></li>
+                <li><a href="{% url 'docs' %}">Help</a></li>
 
                 {% if user.is_authenticated %}
-                    <li><a href="{% url 'crags:mine' %}">Meine Felsen</a></li>
-                    <li><a href="{% url 'crags:create' %}">Eintragen</a></li>
+                    <li><a href="{% url 'crags:mine' %}">My crags</a></li>
+                    <li><a href="{% url 'crags:create' %}">Add a crag</a></li>
                     {% if user.is_staff %}
                         <li><a href="{% url 'admin:index' %}">Admin</a></li>
                     {% endif %}
@@ -67,13 +67,13 @@
                     <li>
                         <form method="post" action="{% url 'account_logout' %}" class="nav-form">
                             {% csrf_token %}
-                            <button type="submit" class="outline secondary">Abmelden</button>
+                            <button type="submit" class="outline secondary">Log out</button>
                         </form>
                     </li>
                 {% else %}
-                    <li><a href="{% url 'account_login' %}">Anmelden</a></li>
+                    <li><a href="{% url 'account_login' %}">Log in</a></li>
                     <li>
-                        <a href="{% url 'account_signup' %}" role="button" class="outline">Registrieren</a>
+                        <a href="{% url 'account_signup' %}" role="button" class="outline">Sign up</a>
                     </li>
                 {% endif %}
             </ul>
@@ -107,14 +107,13 @@
         <div class="footer-content">
 
             <small>
-                <strong>Felsen mit Kids</strong><br>
-                Familienfreundliche Kletterfelsen
-                finden und teilen.
+                <strong>gr8base community</strong><br>
+                Find and share family-friendly climbing crags.
             </small>
 
             <small>
                 <a href="{% url 'docs' %}">
-                    Dokumentation
+                    Documentation
                 </a>
             </small>
 

@@ -1,4 +1,5 @@
 import io
+import re
 import tempfile
 
 from django.contrib.auth import get_user_model
@@ -7,7 +8,7 @@ from django.test import TestCase, override_settings
 from django.urls import reverse
 from PIL import Image
 
-from .models import Area, Crag, Photo
+from .models import Area, Crag, Feature, Photo
 
 User = get_user_model()
 
@@ -19,10 +20,13 @@ def form_data(base_area, **overrides):
         "new_area": "",
         "description": "",
         "approach_minutes": "",
-        "approach_characteristics": [],
         "rating_babies": "",
         "rating_ages_2_4": "",
         "rating_ages_5_plus": "",
+        "approach_assessed": "",
+        "approach_features": [],
+        "base_assessed": "",
+        "base_features": [],
         "guidebook": "",
         "location": "",
         "parking": "",
@@ -141,6 +145,43 @@ class PublicVisibilityTests(CragTestBase):
             response,
             'href="https://www.google.com/maps/search/?api=1&amp;query=47.123456,10.654321"',
         )
+
+    def test_unassessed_places_show_no_information(self):
+        response = self.client.get(reverse("crags:detail", args=[self.published.pk]))
+
+        self.assertContains(response, "No information", count=2)
+        self.assertNotContains(response, "Not stroller-friendly")
+        self.assertNotContains(response, "No hazards reported")
+
+    def test_assessed_empty_places_report_no_hazards_and_not_stroller_friendly(self):
+        self.published.approach_assessed = True
+        self.published.base_assessed = True
+        self.published.save()
+
+        response = self.client.get(reverse("crags:detail", args=[self.published.pk]))
+
+        self.assertContains(response, "No hazards reported", count=2)
+        self.assertContains(response, "Not stroller-friendly", count=2)
+        self.assertNotContains(response, "safe")
+
+    def test_assessed_features_use_warning_and_positive_styles(self):
+        rockfall = Feature.objects.get(slug="rockfall")
+        stroller_friendly = Feature.objects.get(slug="stroller_friendly")
+        fall_hazard = Feature.objects.get(slug="fall_hazard")
+        self.published.approach_assessed = True
+        self.published.base_assessed = True
+        self.published.save()
+        self.published.approach_features.add(rockfall, stroller_friendly)
+        self.published.base_features.add(fall_hazard)
+
+        response = self.client.get(reverse("crags:detail", args=[self.published.pk]))
+
+        html = response.content.decode()
+        self.assertRegex(html, r'class="assessment-warning">\s*Rockfall')
+        self.assertRegex(html, r'class="assessment-positive">\s*Stroller-friendly')
+        self.assertRegex(html, r'class="assessment-warning">\s*Fall hazard')
+        self.assertContains(response, "Not stroller-friendly")
+        self.assertNotContains(response, "No hazards reported")
 
     def test_anonymous_gets_404_for_draft(self):
         resp = self.client.get(reverse("crags:detail", args=[self.draft.pk]))
@@ -277,11 +318,10 @@ class CreateTests(CragTestBase):
         response = self.client.get(reverse("crags:create"))
 
         self.assertContains(response, 'name="images"')
-        self.assertContains(response, "Fotos hinzufügen (optional)")
+        self.assertContains(response, "Add photos (optional)")
         self.assertContains(response, '<select name="rating_babies"')
-        self.assertContains(response, "Bewertung für Babys")
-        self.assertContains(response, "Teilweise kinderwagentauglich")
-        self.assertContains(response, "Aktuellen Standort verwenden")
+        self.assertContains(response, "Rating for babies")
+        self.assertContains(response, "Use my current location")
         self.assertContains(response, 'data-location-status role="status"')
 
     def test_age_ratings_save_selected_values(self):
@@ -302,53 +342,42 @@ class CreateTests(CragTestBase):
         self.assertEqual(crag.rating_ages_2_4, 3)
         self.assertEqual(crag.rating_ages_5_plus, 4)
 
-    def test_approach_characteristics_support_partial_stroller_access(self):
+    def test_selected_features_save_and_mark_places_assessed(self):
+        self.client.force_login(self.bob)
+        rockfall = Feature.objects.get(slug="rockfall")
+        stroller_friendly = Feature.objects.get(slug="stroller_friendly")
+        response = self.client.post(
+            reverse("crags:create"),
+            form_data(
+                self.area,
+                name="Merkmale eingetragen",
+                approach_features=[str(rockfall.pk)],
+                base_features=[str(stroller_friendly.pk)],
+            ),
+        )
+
+        self.assertEqual(response.status_code, 302)
+        crag = Crag.objects.get(name="Merkmale eingetragen")
+        self.assertTrue(crag.approach_assessed)
+        self.assertTrue(crag.base_assessed)
+        self.assertEqual(list(crag.approach_features.all()), [rockfall])
+        self.assertEqual(list(crag.base_features.all()), [stroller_friendly])
+
+    def test_assessment_checkboxes_save_without_features(self):
         self.client.force_login(self.bob)
         self.client.post(
             reverse("crags:create"),
             form_data(
                 self.area,
-                name="Teilweise erreichbar",
-                approach_characteristics=[
-                    Crag.ApproachCharacteristic.ROCKFALL,
-                    Crag.ApproachCharacteristic.PARTIALLY_STROLLER_FRIENDLY,
-                ],
-                guidebook="Kletterführer Allgäu",
-                location="47.123456, 10.654321",
-                parking="Parkplatz am Ortsrand",
+                name="Leere Bewertung",
+                approach_assessed="on",
+                base_assessed="on",
             ),
         )
 
-        crag = Crag.objects.get(name="Teilweise erreichbar")
-        self.assertEqual(
-            crag.approach_characteristics,
-            ["ROCKFALL", "PARTIALLY_STROLLER_FRIENDLY"],
-        )
-        self.assertEqual(crag.guidebook, "Kletterführer Allgäu")
-        self.assertEqual(str(crag.latitude), "47.123456")
-        self.assertEqual(str(crag.longitude), "10.654321")
-        self.assertEqual(crag.parking, "Parkplatz am Ortsrand")
-
-    def test_stroller_characteristics_are_mutually_exclusive(self):
-        self.client.force_login(self.bob)
-        response = self.client.post(
-            reverse("crags:create"),
-            form_data(
-                self.area,
-                name="Widersprüchliche Angaben",
-                approach_characteristics=[
-                    Crag.ApproachCharacteristic.STROLLER_FRIENDLY,
-                    Crag.ApproachCharacteristic.PARTIALLY_STROLLER_FRIENDLY,
-                ],
-            ),
-        )
-
-        self.assertEqual(response.status_code, 200)
-        self.assertFalse(Crag.objects.filter(name="Widersprüchliche Angaben").exists())
-        self.assertContains(
-            response,
-            "Bitte nur eine Angabe zur Kinderwagentauglichkeit auswählen.",
-        )
+        crag = Crag.objects.get(name="Leere Bewertung")
+        self.assertTrue(crag.approach_assessed)
+        self.assertTrue(crag.base_assessed)
 
     def test_malformed_coordinates_are_rejected(self):
         self.client.force_login(self.bob)
@@ -363,7 +392,7 @@ class CreateTests(CragTestBase):
 
         self.assertEqual(response.status_code, 200)
         self.assertFalse(Crag.objects.filter(name="Unvollständige Koordinaten").exists())
-        self.assertContains(response, "Bitte Koordinaten wie")
+        self.assertContains(response, "Enter coordinates such as")
 
     def test_google_maps_url_coordinates_are_saved(self):
         self.client.force_login(self.bob)
@@ -407,7 +436,7 @@ class CreateTests(CragTestBase):
 
         self.assertEqual(response.status_code, 200)
         self.assertFalse(Crag.objects.filter(name="Ungültiger Standort").exists())
-        self.assertContains(response, "Breitengrad muss zwischen")
+        self.assertContains(response, "Latitude must be between")
 
     def test_create_crag_with_multiple_photos(self):
         self.client.force_login(self.bob)
@@ -449,7 +478,7 @@ class CreateTests(CragTestBase):
 
         self.assertEqual(response.status_code, 200)
         self.assertFalse(Crag.objects.filter(name="Ungültiges Foto").exists())
-        self.assertContains(response, "Die Datei konnte nicht als Bild gelesen werden.")
+        self.assertContains(response, "The file could not be read as an image.")
 
 
 class NewAreaTests(CragTestBase):
