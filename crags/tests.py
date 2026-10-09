@@ -24,8 +24,7 @@ def form_data(base_area, **overrides):
         "rating_ages_2_4": "",
         "rating_ages_5_plus": "",
         "guidebook": "",
-        "latitude": "",
-        "longitude": "",
+        "location": "",
         "parking": "",
         "family_notes": "",
         "orientation": "",
@@ -126,6 +125,23 @@ class PublicVisibilityTests(CragTestBase):
         resp = self.client.get(reverse("crags:detail", args=[self.published.pk]))
         self.assertEqual(resp.status_code, 200)
 
+    def test_location_link_uses_google_maps_url(self):
+        crag = Crag.objects.create(
+            name="Fels mit Standort",
+            area=self.area,
+            created_by=self.alice,
+            status=Crag.Status.PUBLISHED,
+            latitude="47.123456",
+            longitude="10.654321",
+        )
+
+        response = self.client.get(reverse("crags:detail", args=[crag.pk]))
+
+        self.assertContains(
+            response,
+            'href="https://www.google.com/maps/search/?api=1&amp;query=47.123456,10.654321"',
+        )
+
     def test_anonymous_gets_404_for_draft(self):
         resp = self.client.get(reverse("crags:detail", args=[self.draft.pk]))
         self.assertEqual(resp.status_code, 404)
@@ -161,6 +177,23 @@ class LoginRequiredTests(CragTestBase):
 
 
 class EditPermissionTests(CragTestBase):
+    def test_edit_form_prefills_existing_location(self):
+        crag = Crag.objects.create(
+            name="Fels mit Koordinaten",
+            area=self.area,
+            created_by=self.alice,
+            latitude="47.123456",
+            longitude="10.654321",
+        )
+        self.client.force_login(self.alice)
+
+        response = self.client.get(reverse("crags:edit", args=[crag.pk]))
+
+        self.assertEqual(
+            response.context["form"]["location"].value(),
+            "47.123456, 10.654321",
+        )
+
     def test_other_user_cannot_open_edit_page(self):
         self.client.force_login(self.bob)
         resp = self.client.get(reverse("crags:edit", args=[self.published.pk]))
@@ -281,8 +314,7 @@ class CreateTests(CragTestBase):
                     Crag.ApproachCharacteristic.PARTIALLY_STROLLER_FRIENDLY,
                 ],
                 guidebook="Kletterführer Allgäu",
-                latitude="47.123456",
-                longitude="10.654321",
+                location="47.123456, 10.654321",
                 parking="Parkplatz am Ortsrand",
             ),
         )
@@ -318,21 +350,64 @@ class CreateTests(CragTestBase):
             "Bitte nur eine Angabe zur Kinderwagentauglichkeit auswählen.",
         )
 
-    def test_coordinates_must_be_provided_as_a_pair(self):
+    def test_malformed_coordinates_are_rejected(self):
         self.client.force_login(self.bob)
         response = self.client.post(
             reverse("crags:create"),
             form_data(
                 self.area,
                 name="Unvollständige Koordinaten",
-                latitude="47.123456",
-                longitude="",
+                location="47.123456",
             ),
         )
 
         self.assertEqual(response.status_code, 200)
         self.assertFalse(Crag.objects.filter(name="Unvollständige Koordinaten").exists())
-        self.assertContains(response, "Bitte beide Koordinaten oder keine Koordinaten angeben.")
+        self.assertContains(response, "Bitte Koordinaten wie")
+
+    def test_google_maps_url_coordinates_are_saved(self):
+        self.client.force_login(self.bob)
+        self.client.post(
+            reverse("crags:create"),
+            form_data(
+                self.area,
+                name="Maps-Link",
+                location="https://www.google.com/maps/place/Fels/@47.123456,10.654321,15z",
+            ),
+        )
+
+        crag = Crag.objects.get(name="Maps-Link")
+        self.assertEqual(str(crag.latitude), "47.123456")
+        self.assertEqual(str(crag.longitude), "10.654321")
+
+    def test_google_maps_share_url_coordinates_are_saved(self):
+        self.client.force_login(self.bob)
+        self.client.post(
+            reverse("crags:create"),
+            form_data(
+                self.area,
+                name="Maps-Teilen-Link",
+                location=(
+                    "https://www.google.com/maps/place/Fels/"
+                    "data=!4m2!3m1!1s0x0!3d47.123456!4d10.654321"
+                ),
+            ),
+        )
+
+        crag = Crag.objects.get(name="Maps-Teilen-Link")
+        self.assertEqual(str(crag.latitude), "47.123456")
+        self.assertEqual(str(crag.longitude), "10.654321")
+
+    def test_invalid_coordinate_ranges_are_rejected(self):
+        self.client.force_login(self.bob)
+        response = self.client.post(
+            reverse("crags:create"),
+            form_data(self.area, name="Ungültiger Standort", location="91, 10"),
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(Crag.objects.filter(name="Ungültiger Standort").exists())
+        self.assertContains(response, "Breitengrad muss zwischen")
 
     def test_create_crag_with_multiple_photos(self):
         self.client.force_login(self.bob)

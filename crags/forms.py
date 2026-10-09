@@ -1,6 +1,8 @@
-from django import forms
 import io
+import re
+from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 
+from django import forms
 from django.core.exceptions import ValidationError
 from django.core.files.base import ContentFile
 from PIL import Image, ImageOps, UnidentifiedImageError
@@ -22,6 +24,48 @@ RATING_CHOICES = [
     (4, "★ 4/5"),
     (5, "★ 5/5"),
 ]
+COORDINATE_PAIR_RE = re.compile(
+    r"(?P<latitude>[+-]?\d{1,2}(?:\.\d+)?)\s*,\s*"
+    r"(?P<longitude>[+-]?\d{1,3}(?:\.\d+)?)"
+)
+GOOGLE_MAPS_COORDINATES_RE = re.compile(
+    r"!3d(?P<latitude>[+-]?\d+(?:\.\d+)?)"
+    r"!4d(?P<longitude>[+-]?\d+(?:\.\d+)?)",
+    re.IGNORECASE,
+)
+
+
+def parse_coordinates(value):
+    """Extract latitude and longitude from decimal coordinates or a Maps URL."""
+    value = (value or "").strip()
+    if not value:
+        return None, None
+
+    match = GOOGLE_MAPS_COORDINATES_RE.search(value)
+    if match is None:
+        match = COORDINATE_PAIR_RE.search(value)
+    if match is None:
+        raise ValidationError(
+            "Bitte Koordinaten wie „47.123456, 10.123456“ oder einen "
+            "vollständigen Google-Maps-Link eingeben."
+        )
+
+    try:
+        latitude = Decimal(match.group("latitude"))
+        longitude = Decimal(match.group("longitude"))
+        precision = Decimal("0.000001")
+        latitude = latitude.quantize(precision, rounding=ROUND_HALF_UP)
+        longitude = longitude.quantize(precision, rounding=ROUND_HALF_UP)
+    except InvalidOperation:
+        raise ValidationError("Die Koordinaten sind ungültig oder zu genau.")
+
+    if not -90 <= latitude <= 90 or not -180 <= longitude <= 180:
+        raise ValidationError(
+            "Breitengrad muss zwischen −90 und 90 und "
+            "Längengrad zwischen −180 und 180 liegen."
+        )
+
+    return latitude, longitude
 
 
 def process_image(upload):
@@ -63,21 +107,13 @@ class CragForm(forms.ModelForm):
     guidebook = forms.CharField(
         max_length=250, required=False, label="Kletterführer"
     )
-    latitude = forms.DecimalField(
-        max_digits=9,
-        decimal_places=6,
-        min_value=-90,
-        max_value=90,
+    location = forms.CharField(
         required=False,
-        label="Breitengrad",
-    )
-    longitude = forms.DecimalField(
-        max_digits=9,
-        decimal_places=6,
-        min_value=-180,
-        max_value=180,
-        required=False,
-        label="Längengrad",
+        label="Fels Koordinaten",
+        help_text=(
+            "Google-Maps-Link oder Koordinaten, z. B. 47.123456, 10.123456. "
+            "Kurzlinks werden nicht unterstützt."
+        ),
     )
     parking = forms.CharField(
         required=False,
@@ -121,8 +157,7 @@ class CragForm(forms.ModelForm):
         "rating_babies",
         "rating_ages_2_4",
         "rating_ages_5_plus",
-        "latitude",
-        "longitude",
+        "location",
         "parking",
         "family_notes",
         "orientation",
@@ -140,8 +175,6 @@ class CragForm(forms.ModelForm):
             "rating_babies",
             "rating_ages_2_4",
             "rating_ages_5_plus",
-            "latitude",
-            "longitude",
             "parking",
             "family_notes",
             "orientation",
@@ -150,6 +183,12 @@ class CragForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._new_area_name = ""
+        self._coordinates = (None, None)
+        if self.instance and self.instance.pk:
+            latitude, longitude = self.instance.latitude, self.instance.longitude
+            if latitude is not None and longitude is not None:
+                self.fields["location"].initial = f"{latitude}, {longitude}"
+
         # Either the dropdown or the text field is enough, so neither is required alone.
         # The clean() method below enforces "exactly one of them".
         self.fields["area"].required = False
@@ -171,12 +210,10 @@ class CragForm(forms.ModelForm):
                 "Bitte nur eine Angabe zur Kinderwagentauglichkeit auswählen.",
             )
 
-        latitude = cleaned.get("latitude")
-        longitude = cleaned.get("longitude")
-        if (latitude is None) != (longitude is None):
-            message = "Bitte beide Koordinaten oder keine Koordinaten angeben."
-            self.add_error("latitude", message)
-            self.add_error("longitude", message)
+        try:
+            self._coordinates = parse_coordinates(cleaned.get("location"))
+        except ValidationError as exc:
+            self.add_error("location", exc)
 
         # collapse repeated spaces: "Neue   Wand" -> "Neue Wand"
         self._new_area_name = " ".join((cleaned.get("new_area") or "").split())
@@ -196,6 +233,7 @@ class CragForm(forms.ModelForm):
 
     def save(self, commit=True):
         crag = super().save(commit=False)
+        crag.latitude, crag.longitude = self._coordinates
 
         if self._new_area_name:
             area = Area.objects.filter(name__iexact=self._new_area_name).first()

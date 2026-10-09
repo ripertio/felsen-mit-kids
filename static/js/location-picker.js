@@ -16,20 +16,16 @@
 
         navigator.geolocation.getCurrentPosition(
             (position) => {
-                const latitude = document.querySelector('[name="latitude"]');
-                const longitude = document.querySelector('[name="longitude"]');
-                if (!latitude || !longitude) {
+                const location = document.querySelector('[name="location"]');
+                if (!location) {
                     button.disabled = false;
-                    status.textContent = "Koordinatenfelder wurden nicht gefunden.";
+                    status.textContent = "Das Standortfeld wurde nicht gefunden.";
                     return;
                 }
 
-                latitude.value = position.coords.latitude.toFixed(6);
-                longitude.value = position.coords.longitude.toFixed(6);
-                latitude.dispatchEvent(new Event("input", { bubbles: true }));
-                latitude.dispatchEvent(new Event("change", { bubbles: true }));
-                longitude.dispatchEvent(new Event("input", { bubbles: true }));
-                longitude.dispatchEvent(new Event("change", { bubbles: true }));
+                location.value = `${position.coords.latitude.toFixed(6)}, ${position.coords.longitude.toFixed(6)}`;
+                location.dispatchEvent(new Event("input", { bubbles: true }));
+                location.dispatchEvent(new Event("change", { bubbles: true }));
                 button.disabled = false;
                 status.textContent = "Standort übernommen.";
             },

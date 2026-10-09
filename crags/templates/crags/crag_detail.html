@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load l10n %}
 
 
 {% block title %}
@@ -177,8 +178,8 @@
     {% if crag.latitude != None and crag.longitude != None %}
         <p>
             <strong>Koordinaten:</strong>
-            <a href="https://www.openstreetmap.org/?mlat={{ crag.latitude }}&mlon={{ crag.longitude }}#map=16/{{ crag.latitude }}/{{ crag.longitude }}">
-                {{ crag.latitude }}, {{ crag.longitude }}
+            <a href="https://www.google.com/maps/search/?api=1&amp;query={{ crag.latitude|unlocalize }},{{ crag.longitude|unlocalize }}">
+                {{ crag.latitude|unlocalize }}, {{ crag.longitude|unlocalize }}
             </a>
         </p>
     {% endif %}
