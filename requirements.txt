@@ -2,5 +2,6 @@ Django>=5.2,<6
 gunicorn
 psycopg[binary]
 Pillow
+pillow-heif
 django-allauth
 argon2-cffi

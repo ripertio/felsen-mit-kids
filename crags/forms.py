@@ -4,49 +4,51 @@ import io
 from django.core.exceptions import ValidationError
 from django.core.files.base import ContentFile
 from PIL import Image, ImageOps, UnidentifiedImageError
+import pillow_heif
 
 from .models import Area, Crag, Photo
+
+pillow_heif.register_heif_opener()
 
 MAX_UPLOAD_BYTES = 15 * 1024 * 1024   # 15 MB
 MAX_PIXELS = 60_000_000               # protects against decompression bombs
 MAX_EDGE = 1600                       # longest side after resize
-ALLOWED_FORMATS = {"JPEG", "PNG", "WEBP", "MPO"}  # HEIC is converted to JPEG by iOS before upload
+ALLOWED_FORMATS = {"JPEG", "PNG", "WEBP", "MPO", "HEIF"}
 
 
-class PhotoForm(forms.ModelForm):
-    class Meta:
-        model = Photo
-        fields = ["image", "category", "caption"]
+def process_image(upload):
+    """Validate an upload and return it as a resized WEBP ContentFile."""
+    if upload.size > MAX_UPLOAD_BYTES:
+        raise ValidationError("Das Bild ist zu groß (maximal 15 MB).")
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        # Hint for the phone's file picker; iPhones convert HEIC to JPEG for this
-        self.fields["image"].widget.attrs["accept"] = "image/jpeg,image/png,image/webp"
+    try:
+        upload.seek(0)
+        img = Image.open(upload)
+        if img.format not in ALLOWED_FORMATS:
+            raise ValidationError(
+                "Bitte ein JPG-, PNG-, WebP- oder HEIC-Bild hochladen."
+            )
+        if img.width * img.height > MAX_PIXELS:
+            raise ValidationError("Das Bild hat zu viele Pixel.")
 
-    def clean_image(self):
-        upload = self.cleaned_data["image"]
+        img = ImageOps.exif_transpose(img)
+        img = img.convert("RGB")
+        img.thumbnail((MAX_EDGE, MAX_EDGE))
 
-        if upload.size > MAX_UPLOAD_BYTES:
-            raise ValidationError("Das Bild ist zu groß (maximal 15 MB).")
+        buffer = io.BytesIO()
+        img.save(buffer, format="WEBP", quality=80, method=4)
+    except (UnidentifiedImageError, OSError, Image.DecompressionBombError):
+        raise ValidationError("Die Datei konnte nicht als Bild gelesen werden.")
 
-        try:
-            img = Image.open(upload)
-            if img.format not in ALLOWED_FORMATS:
-                raise ValidationError("Bitte ein JPG-, PNG- oder WebP-Bild hochladen.")
-            if img.width * img.height > MAX_PIXELS:
-                raise ValidationError("Das Bild hat zu viele Pixel.")
+    return ContentFile(buffer.getvalue(), name="photo.webp")
 
-            img = ImageOps.exif_transpose(img)  # apply rotation BEFORE dropping EXIF
-            img = img.convert("RGB")
-            img.thumbnail((MAX_EDGE, MAX_EDGE))
 
-            buffer = io.BytesIO()
-            img.save(buffer, format="WEBP", quality=80, method=4)
-        except (UnidentifiedImageError, OSError, Image.DecompressionBombError):
-            raise ValidationError("Die Datei konnte nicht als Bild gelesen werden.")
-
-        # The filename is replaced by photo_upload_path on save
-        return ContentFile(buffer.getvalue(), name="photo.webp")
+class BulkPhotoForm(forms.Form):
+    category = forms.ChoiceField(
+        choices=Photo.Category.choices,
+        initial=Photo.Category.CRAG,
+        label="Kategorie",
+    )
 
 
 class CragForm(forms.ModelForm):

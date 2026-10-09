@@ -1,13 +1,15 @@
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.core.exceptions import ValidationError
 from django.db.models import Q
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
 
-from .forms import CragForm, PhotoForm
+from .forms import BulkPhotoForm, CragForm, process_image
 from .models import Area, Crag, Photo
 
 MAX_PHOTOS_PER_CRAG = 8
+MAX_FILES_PER_UPLOAD = 8
 
 def visible_crags(user):
     """Who may SEE which crags."""
@@ -157,21 +159,48 @@ def photo_add(request, pk):
         return redirect("crags:detail", pk=crag.pk)
 
     if request.method == "POST":
-        form = PhotoForm(request.POST, request.FILES)
-        if form.is_valid():
-            photo = form.save(commit=False)
-            photo.crag = crag
-            photo.uploaded_by = request.user
-            photo.save()
-            messages.success(request, "Foto hochgeladen.")
-            return redirect("crags:detail", pk=crag.pk)
+        form = BulkPhotoForm(request.POST)
+        uploads = request.FILES.getlist("images")
+        existing = crag.photos.count()
+
+        if not uploads:
+            messages.error(request, "Bitte mindestens ein Bild auswählen.")
+        elif len(uploads) > MAX_FILES_PER_UPLOAD:
+            messages.error(request, f"Maximal {MAX_FILES_PER_UPLOAD} Bilder auf einmal.")
+        elif not request.user.is_staff and existing + len(uploads) > MAX_PHOTOS_PER_CRAG:
+            messages.error(
+                request,
+                f"Maximal {MAX_PHOTOS_PER_CRAG} Fotos pro Felsen. "
+                f"Noch {MAX_PHOTOS_PER_CRAG - existing} möglich.",
+            )
+        elif form.is_valid():
+            converted, errors = [], []
+            for upload in uploads:
+                try:
+                    converted.append((upload, process_image(upload)))
+                except ValidationError as exc:
+                    errors.append(f"{upload.name}: {exc.messages[0]}")
+
+            if errors:
+                for error in errors:
+                    messages.error(request, error)
+            else:
+                for _, content in converted:
+                    Photo.objects.create(
+                        crag=crag,
+                        image=content,
+                        category=form.cleaned_data["category"],
+                        uploaded_by=request.user,
+                    )
+                messages.success(request, f"{len(converted)} Foto(s) hochgeladen.")
+                return redirect("crags:detail", pk=crag.pk)
     else:
-        form = PhotoForm()
+        form = BulkPhotoForm()
 
     return render(
         request,
         "crags/crag_photo_form.html",
-        {"form": form, "crag": crag},
+        {"form": form, "crag": crag, "max_files": MAX_FILES_PER_UPLOAD},
     )
 
 

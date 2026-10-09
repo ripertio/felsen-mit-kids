@@ -1,8 +1,13 @@
-from django.contrib.auth import get_user_model
-from django.test import TestCase
-from django.urls import reverse
+import io
+import tempfile
 
-from .models import Area, Crag
+from django.contrib.auth import get_user_model
+from django.core.files.uploadedfile import SimpleUploadedFile
+from django.test import TestCase, override_settings
+from django.urls import reverse
+from PIL import Image
+
+from .models import Area, Crag, Photo
 
 User = get_user_model()
 
@@ -248,3 +253,33 @@ class NewAreaTests(CragTestBase):
         )
         self.assertEqual(resp.status_code, 200)
         self.assertFalse(Crag.objects.filter(name="Neu").exists())
+
+
+class PhotoUploadTests(CragTestBase):
+    def test_owner_can_upload_multiple_photos(self):
+        image_buffer = io.BytesIO()
+        Image.new("RGB", (32, 24), "red").save(image_buffer, format="JPEG")
+        image_bytes = image_buffer.getvalue()
+
+        self.client.force_login(self.alice)
+        with tempfile.TemporaryDirectory() as media_root:
+            with override_settings(MEDIA_ROOT=media_root):
+                response = self.client.post(
+                    reverse("crags:photo_add", args=[self.draft.pk]),
+                    {
+                        "category": Photo.Category.CRAG,
+                        "images": [
+                            SimpleUploadedFile(
+                                "first.jpg", image_bytes, content_type="image/jpeg"
+                            ),
+                            SimpleUploadedFile(
+                                "second.jpg", image_bytes, content_type="image/jpeg"
+                            ),
+                        ],
+                    },
+                )
+
+        self.assertRedirects(response, reverse("crags:detail", args=[self.draft.pk]))
+        photos = Photo.objects.filter(crag=self.draft).order_by("pk")
+        self.assertEqual(photos.count(), 2)
+        self.assertTrue(all(photo.image.name.endswith(".webp") for photo in photos))

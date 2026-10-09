@@ -1,13 +1,18 @@
 {% extends "base.html" %}
 
-{% block title %}Foto hinzufügen – Felsen mit Kids{% endblock %}
+{% block title %}Fotos hinzufügen – Felsen mit Kids{% endblock %}
 
 {% block content %}
-    <h1>Foto für „{{ crag.name }}“</h1>
+    <h1>Fotos für „{{ crag.name }}“</h1>
 
     <form method="post" enctype="multipart/form-data">
         {% csrf_token %}
         {{ form.as_p }}
+        <p>
+            <label for="id_images">Bilder (mehrere auswählbar, maximal {{ max_files }})</label>
+            <input type="file" name="images" id="id_images" multiple required
+                   accept="image/jpeg,image/png,image/webp,image/heic,image/heif">
+        </p>
         <button type="submit">Hochladen</button>
     </form>
 
