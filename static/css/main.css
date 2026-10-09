@@ -6,6 +6,16 @@
 .photo-grid{grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:1rem}
 .photo-grid figure,.nav-form{margin:0}
 .photo-grid img{width:100%;aspect-ratio:4/3;object-fit:cover;border-radius:var(--pico-border-radius)}
+.gallery-trigger{display:block}
+.photo-gallery{width:min(96vw,1100px);max-width:none;height:min(94vh,850px);padding:1rem;border:0;border-radius:var(--pico-border-radius);background:#111;color:#fff}
+.photo-gallery::backdrop{background:rgb(0 0 0/.88)}
+.photo-gallery-content{position:relative;display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:.5rem;height:100%}
+.photo-gallery-figure{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:.75rem;min-width:0;height:100%;margin:0}
+.photo-gallery-figure img{display:block;max-width:100%;max-height:calc(94vh - 6rem);object-fit:contain;touch-action:pan-y}
+.photo-gallery-figure figcaption{display:flex;justify-content:space-between;gap:1rem;width:100%;color:#fff}
+.photo-gallery-content button{z-index:1;width:2.75rem;height:2.75rem;margin:0;padding:0;border:1px solid rgb(255 255 255/.65);border-radius:50%;background:rgb(0 0 0/.55);color:#fff;font-size:1.8rem;line-height:1}
+.photo-gallery-content .photo-gallery-close{position:absolute;top:.25rem;right:.25rem}
+.photo-gallery-content button:focus-visible{outline:2px solid #fff;outline-offset:3px}
 .photo-grid form{margin:.25rem 0 0}
 .photo-grid button{margin:0;padding:.25rem .6rem}
 .brand{text-decoration:none}
@@ -33,6 +43,12 @@
   .site-nav .nav-links li{width:100%;padding:.4rem 0}
   .site-nav .nav-links a[role=button],.site-nav .nav-links button{display:block;width:100%;text-align:center}
   .site-nav .nav-toggle:focus-visible+.nav-burger{outline:2px solid var(--pico-primary);outline-offset:2px}
+}
+@media(max-width:600px){
+  .photo-gallery{width:100vw;height:100dvh;max-height:100dvh;padding:.5rem;border-radius:0}
+  .photo-gallery-content{grid-template-columns:2.5rem minmax(0,1fr) 2.5rem;gap:.25rem}
+  .photo-gallery-figure img{max-height:calc(100dvh - 7rem)}
+  .photo-gallery-content button{width:2.5rem;height:2.5rem}
 }
 @media(min-width:992px){
   .site-nav .nav-toggle,.site-nav .nav-burger{display:none}

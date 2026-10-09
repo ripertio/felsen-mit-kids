@@ -311,6 +311,24 @@ class NewAreaTests(CragTestBase):
 
 
 class PhotoUploadTests(CragTestBase):
+    def test_crag_detail_renders_gallery_with_direct_image_fallback(self):
+        self.client.force_login(self.alice)
+        with tempfile.TemporaryDirectory() as media_root:
+            with override_settings(MEDIA_ROOT=media_root):
+                photo = Photo.objects.create(
+                    crag=self.draft,
+                    image=image_upload("gallery.jpg"),
+                    category=Photo.Category.CRAG,
+                    uploaded_by=self.alice,
+                )
+                response = self.client.get(reverse("crags:detail", args=[self.draft.pk]))
+
+        self.assertContains(response, 'class="gallery-trigger"')
+        self.assertContains(response, 'href="/media/%s"' % photo.image.name)
+        self.assertContains(response, 'dialog class="photo-gallery"')
+        self.assertContains(response, "data-gallery-next")
+        self.assertContains(response, "js/photo-gallery.js")
+
     def test_owner_can_upload_multiple_photos(self):
         image_buffer = io.BytesIO()
         Image.new("RGB", (32, 24), "red").save(image_buffer, format="JPEG")

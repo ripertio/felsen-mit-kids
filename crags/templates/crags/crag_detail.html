@@ -41,7 +41,11 @@
         <div class="photo-grid">
             {% for photo in crag.photos.all %}
                 <figure>
-                    <a href="{{ photo.image.url }}">
+                    <a href="{{ photo.image.url }}"
+                       class="gallery-trigger"
+                       data-gallery-image
+                       data-alt="{% if photo.caption %}{{ photo.caption }}{% else %}{{ photo.get_category_display }}{% endif %}"
+                       data-caption="{{ photo.get_category_display }}{% if photo.caption %} – {{ photo.caption }}{% endif %}">
                         <img
                             src="{{ photo.image.url }}"
                             alt="{% if photo.caption %}{{ photo.caption }}{% else %}{{ photo.get_category_display }}{% endif %}"
@@ -64,6 +68,20 @@
                 </figure>
             {% endfor %}
         </div>
+        <dialog class="photo-gallery" aria-label="Fotogalerie">
+            <div class="photo-gallery-content">
+                <button type="button" class="photo-gallery-close" data-gallery-close aria-label="Galerie schließen">×</button>
+                <button type="button" class="photo-gallery-previous" data-gallery-previous aria-label="Vorheriges Foto">‹</button>
+                <figure class="photo-gallery-figure">
+                    <img data-gallery-view alt="">
+                    <figcaption>
+                        <span data-gallery-caption></span>
+                        <span data-gallery-counter aria-live="polite"></span>
+                    </figcaption>
+                </figure>
+                <button type="button" class="photo-gallery-next" data-gallery-next aria-label="Nächstes Foto">›</button>
+            </div>
+        </dialog>
     {% endif %}
 
     {% if can_edit %}
