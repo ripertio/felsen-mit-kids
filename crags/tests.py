@@ -3,6 +3,7 @@ import re
 import tempfile
 
 from django.contrib.auth import get_user_model
+from django.contrib.auth.models import Group
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase, override_settings
 from django.urls import reverse
@@ -149,7 +150,8 @@ class PublicVisibilityTests(CragTestBase):
     def test_unassessed_places_show_no_information(self):
         response = self.client.get(reverse("crags:detail", args=[self.published.pk]))
 
-        self.assertContains(response, "No information", count=2)
+        self.assertContains(response, "No further information")
+        self.assertContains(response, "No information", count=1)
         self.assertNotContains(response, "Not stroller-friendly")
         self.assertNotContains(response, "No hazards reported")
 
@@ -215,6 +217,36 @@ class LoginRequiredTests(CragTestBase):
                 resp = self.client.get(url)
                 self.assertEqual(resp.status_code, 302)
                 self.assertIn("/accounts/login/", resp["Location"])
+
+
+class CragManagersAdminTests(CragTestBase):
+    def setUp(self):
+        self.bob.is_staff = True
+        self.bob.save(update_fields=["is_staff"])
+        self.bob.groups.add(Group.objects.get(name="Crag Managers"))
+        self.client.force_login(self.bob)
+
+    def test_group_can_manage_other_users_crags_and_areas_in_admin(self):
+        urls = [
+            reverse("admin:crags_crag_changelist"),
+            reverse("admin:crags_crag_add"),
+            reverse("admin:crags_crag_change", args=[self.published.pk]),
+            reverse("admin:crags_crag_delete", args=[self.published.pk]),
+            reverse("admin:crags_area_changelist"),
+            reverse("admin:crags_area_add"),
+            reverse("admin:crags_area_change", args=[self.area.pk]),
+            reverse(
+                "admin:crags_area_delete",
+                args=[Area.objects.create(name="Unused area").pk],
+            ),
+        ]
+
+        for url in urls:
+            with self.subTest(url=url):
+                self.assertEqual(self.client.get(url).status_code, 200)
+
+    def test_crag_managers_group_does_not_grant_superuser(self):
+        self.assertFalse(self.bob.is_superuser)
 
 
 class EditPermissionTests(CragTestBase):
